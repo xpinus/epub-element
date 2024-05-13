@@ -1,0 +1,20 @@
+{
+  "name": "@epub-element/build",
+  "version": "1.0.0",
+  "description": "Build Toolchain for EPub Element",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "gulp --gulpfile gulpfile.js --require @esbuild-kit/cjs-loader"
+  },
+  "devDependencies": {
+    "@esbuild-kit/cjs-loader": "^2.4.4",
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@types/gulp": "^4.0.17",
+    "fast-glob": "^3.3.2",
+    "gulp": "^4.0.2",
+    "rollup": "^4.17.2",
+    "rollup-plugin-esbuild": "^6.1.1"
+  }
+}

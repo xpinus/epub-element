@@ -16,13 +16,19 @@ onMounted(() => {
 </script>
 
 <template>
-  <div>
+  <div class="book-wrap">
     <div id="epub"></div>
   </div>
   <HelloWorld msg="epub-element's vue test" />
 </template>
 
 <style scoped>
+.book-wrap {
+  width: 800px;
+  height: 1040px;
+  margin: 200px auto;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.6);
+}
 .logo {
   height: 6em;
   padding: 1.5em;

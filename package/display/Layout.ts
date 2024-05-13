@@ -1,4 +1,4 @@
-import type { EpubElementInstanceType } from '../core/EpubElement';
+import type { EpubElementInstanceType } from '../core/epub-element';
 
 type LayoutOptions = {
   viewer: EpubElementInstanceType;

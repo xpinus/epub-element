@@ -1,4 +1,4 @@
-import type { EpubElementInstanceType } from '../core/EpubElement';
+import type { EpubElementInstanceType } from '../core/epub-element';
 import * as globalState from '../core/state';
 
 const CUSTOM_ELEMENT_NAME = 'epub-view';

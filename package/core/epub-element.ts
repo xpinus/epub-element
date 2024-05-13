@@ -1,6 +1,6 @@
-import Book from './Book';
-import Layout from '../display/Layout';
-import { defineEpubViewElement } from '../display/EpubView';
+import Book from './book';
+import Layout from '../display/layout';
+import { defineEpubViewElement } from '../display/view';
 import { createUUID } from '../utils';
 
 import * as globalState from './state';
@@ -66,14 +66,6 @@ class EpubElement {
     });
 
     this.layout.render();
-
-    const newView = document.createElement('epub-view');
-
-    const test = el.querySelector('#test');
-
-    if (test) {
-      test.append(newView);
-    }
   }
 
   /**

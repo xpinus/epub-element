@@ -20,7 +20,7 @@ export class XMLParser {
   static async parseContainerXML(containerXMLText: string) {
     const containerXMLDoc = XMLParser.parseXMLDocument(containerXMLText);
 
-    const rootfile: string = containerXMLDoc.getElementsByTagName('rootfile')[0].getAttribute('full-path');
+    const rootfile: string = containerXMLDoc.getElementsByTagName('rootfile')[0].getAttribute('full-path')!;
 
     if (!rootfile) {
       throw new Error("content.opf's path not found");

@@ -1,24 +1,29 @@
 import Book from './book';
-import Layout from '../display/layout';
-import { defineEpubViewElement } from '../display/view';
+import { defineEpubViewElement } from './elements';
 import { createUUID } from '../utils';
+import { setGlobalInstance, removeGlobalInstance } from './instances';
 
-import * as globalState from './state';
+import type { EpubElelementContain } from './elements';
 
 export type EpubElementInstanceType = InstanceType<typeof EpubElement>;
 
+type EpubElementMountOptions = {
+  class?: string;
+};
+
+/**
+ * @description 一切的开始 entry
+ */
 class EpubElement {
   public uuid: string;
   public book: Book;
-  private layout: Layout | null;
 
-  constructor(options: any) {
-    console.log('Hello, EpubNext!', options);
+  constructor() {
+    console.log('Hello, EpubNext!');
 
     this.book = new Book();
-    this.layout = null;
     this.uuid = createUUID();
-    globalState.instances.set(this.uuid, this);
+    setGlobalInstance(this.uuid, this);
   }
 
   /**
@@ -27,8 +32,8 @@ class EpubElement {
    * @param options
    * @returns
    */
-  static openEpub(url: string, options: any) {
-    const _instance = new EpubElement(options);
+  static openEpub(url: string) {
+    const _instance = new EpubElement();
 
     return new Promise((resolve, reject) => {
       _instance.book
@@ -45,27 +50,20 @@ class EpubElement {
   /**
    * 构造并渲染元素
    */
-  mount(el: HTMLElement, options: any) {
+  mount(el: HTMLElement, options: EpubElementMountOptions) {
     console.log(options);
 
     if (!(el instanceof HTMLElement)) {
       throw new Error('el must be HTMLElement for Epub to mount');
     }
 
-    const container = document.createElement('div');
-    container.className = 'epub-viewer-container';
-    container.setAttribute('data-uuid', this.uuid);
-    el.append(container);
+    const epubEl = document.createElement('epub-element') as EpubElelementContain;
+    epubEl.setAttribute('uuid', this.uuid);
+    epubEl.book = this.book;
 
-    this.layout = new Layout({
-      viewer: this,
-      container: container,
-      orientation: 'portrait', // landscape
-      loadmethod: 'dynamic', // full
-      readmode: 'continuous', // pagination
-    });
+    el.replaceWith(epubEl);
 
-    this.layout.render();
+    console.log('mounted', epubEl);
   }
 
   /**
@@ -76,7 +74,9 @@ class EpubElement {
   /**
    * 销毁实例
    */
-  destroy() {}
+  destroy() {
+    removeGlobalInstance(this.uuid);
+  }
 }
 
 const EpubElementProxy = new Proxy(EpubElement, {

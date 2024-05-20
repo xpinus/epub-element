@@ -13,6 +13,8 @@ export type Manifest = Map<string, ManifestItem>;
 export type Spine = {
   idref: string;
   properties?: string;
+  href?: string;
+  content?: string;
 };
 
 type GuideReference = {
@@ -25,7 +27,7 @@ export type Guide = Map<string, GuideReference>;
  * @description 负责epub原始文件内容获取解析，一切和epub内容相关的逻辑都在这里
  */
 class Book {
-  public archive = new Archive();
+  private archive = new Archive();
   public metadata: Metadata = {};
   public manifest: Manifest | null = null;
   public spine: Spine[] = [];
@@ -36,7 +38,7 @@ class Book {
   }
 
   /**
-   * 打开并解析epub文件
+   * @description 打开并解析epub文件
    * @param url
    */
   async open(url: string) {
@@ -52,6 +54,15 @@ class Book {
     this.guide = epubInfo.guide;
 
     // 通过worker去获取resource
+  }
+
+  getSpineContent(href: string) {
+    const spine = this.spine.find((item) => item.href === href);
+    if (!spine) {
+      throw new Error(`can not find ${href} in spine`);
+    }
+
+    return spine.content || '';
   }
 }
 

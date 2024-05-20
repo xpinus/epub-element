@@ -10,7 +10,14 @@ onMounted(() => {
       orientation: 'portrait', // landscape
       loadmethod: 'dynamic', // full
       readmode: 'continuous', // pagination
+      class: 'test-style',
     });
+  });
+
+  document.querySelector('.book-wrap')!.addEventListener('rendered', (e) => {
+    const target = (e as CustomEvent).detail.target;
+
+    console.log(target.width, target.height);
   });
 });
 </script>
@@ -26,7 +33,7 @@ onMounted(() => {
 .book-wrap {
   width: 800px;
   height: 1040px;
-  margin: 200px auto;
+  margin: 100px auto;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.6);
 }
 .logo {

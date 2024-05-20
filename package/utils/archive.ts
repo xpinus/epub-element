@@ -44,6 +44,22 @@ export class Archive {
 
     // spine
     const spine = XMLParser.parseSpine(contentXMLDoc);
+    // 提取所有spine内容
+    const promises = [];
+    for (const spineItem of spine) {
+      spineItem.href = manifest.get(spineItem.idref)?.href || '';
+      promises.push(this.getSpineHtml(spineItem.href));
+    }
+    const spineContents = await Promise.allSettled(promises);
+    for (let i = 0; i < spine.length; i++) {
+      const res = spineContents[i];
+      if (res.status === 'rejected') {
+        console.error(spine[i].href, ' : ', res.reason);
+        spine[i].content = '解析错误';
+        continue;
+      }
+      spine[i].content = res.value as string;
+    }
 
     // guide
     const guide = XMLParser.parseGuide(contentXMLDoc);
@@ -134,8 +150,6 @@ export class Archive {
     if (!links || links.length === 0) {
       return html;
     }
-
-    console.log(links);
 
     // 解压出文件
     const promises = links.map((link) => this.get(link, 'blob'));

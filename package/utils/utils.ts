@@ -66,3 +66,47 @@ export function singleton<T extends new (...args: any[]) => any>(classname: T) {
 
   return proxy;
 }
+
+/**
+ * @description 获取对象的类型
+ */
+export function getObjectType(obj: Object) {
+  return Object.prototype.toString.call(obj).slice(8, -1);
+}
+
+type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (k: infer I) => void ? I : never;
+
+/**
+ * @description Extend properties of an object
+ */
+export function extend<T extends object, S extends object[]>(target: T, ...sources: S): T & UnionToIntersection<S[number]> {
+  sources.forEach(function (source) {
+    if (!source) return;
+    Object.getOwnPropertyNames(source).forEach(function (propName) {
+      Object.defineProperty(target, propName, Object.getOwnPropertyDescriptor(source, propName)!);
+    });
+  });
+  return target as T & UnionToIntersection<S[number]>;
+}
+
+/**
+ * @description 判断是否为number
+ */
+export function isNumber(n: any) {
+  return !isNaN(parseFloat(n)) && isFinite(n);
+}
+
+/**
+ * @description 是否是一个epubcfi string
+ */
+export function isCFIString(cfi: any) {
+  if (typeof cfi !== 'string') return false;
+
+  const reg = new RegExp(/^epubcfi\((.*)\)$/);
+
+  cfi = cfi.trim();
+  const m = cfi.match(reg);
+  if (!m || m.length < 2) return false;
+
+  return true;
+}

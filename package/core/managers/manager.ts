@@ -1,7 +1,9 @@
 import Location from '../location';
-import { isBoolean } from '../utils';
-import type EpubElelementContain from '../core/elements/el-contain';
-import type EpubView from '../core/elements/el-view';
+import { isBoolean } from '../../utils';
+
+import type EpubElelementContain from '../elements/el-contain';
+import type EpubView from '../elements/el-view';
+import type EpubCFI from '../epubcfi';
 
 export enum ManagerOrientation {
   Portrait = 'portrait',
@@ -18,14 +20,8 @@ type ViewManagerOptions = {
   virtual?: boolean;
 };
 
-type ViewRect = {
-  width: number;
-  height: number;
-};
-
 export default class ViewManager {
-  viewsCache: Map<string, EpubView> = new Map(); // 已经渲染的视图的缓存
-  viewsRect: ViewRect[] = []; // 已渲染视图的大小（高或宽）
+  viewsCache: EpubView[] = []; // 已经渲染的视图的缓存
   currentViews: EpubView[] = []; // 当前渲染的视图
   viewer: EpubElelementContain;
   $layoutWrapper: HTMLDivElement;
@@ -45,11 +41,25 @@ export default class ViewManager {
     this.intersectionObserver = new IntersectionObserver(this.onViewIntersect.bind(this));
   }
 
+  /**
+   * @description 渲染
+   */
   render() {
-    console.warn('ViewManager render');
+    console.warn('ViewManager need implement render');
   }
 
-  renderFullSpine() {
+  /**
+   * @description 显示指定的页面
+   */
+  display(target: EpubCFI) {
+    console.warn('ViewManager need implement display: ', target);
+  }
+
+  /**
+   * @description 插入所有的view
+   * @param wrapper view的容器
+   */
+  insertViews(wrapper: HTMLElement) {
     if (!this.viewer.book) {
       throw new Error("epub's book not found");
     }
@@ -57,17 +67,21 @@ export default class ViewManager {
     const book = this.viewer.book;
     const fragment = document.createElement('div');
     const spineHtml = `
-      ${book.spine
-        .map((item) => {
-          return `<epub-view idref="${item.idref}" href="${item.href}" root="${this.viewer.uuid}"></epub-view>`;
-        })
-        .join('')}
-    `;
+        ${book.spine
+          .map((item) => {
+            return `<epub-view idref="${item.idref}" href="${item.href}" root="${this.viewer.uuid}"></epub-view>`;
+          })
+          .join('')}
+      `;
     fragment.innerHTML = spineHtml;
 
-    this.$layoutWrapper.append(...Array.from(fragment.children));
+    wrapper.append(...Array.from(fragment.children));
   }
 
+  /**
+   * @description 监听view进入视图
+   * @param entries
+   */
   onViewIntersect(entries: IntersectionObserverEntry[]) {
     console.log(entries);
   }

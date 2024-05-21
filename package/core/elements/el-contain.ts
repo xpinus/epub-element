@@ -1,24 +1,17 @@
 import { EpubEventOptions } from './event';
-import ViewManager, { ManagerOrientation, ManagerReadMode } from '../../managers/manager';
-import ContinuousViewManager from '../../managers/continuous';
+import Rendition from '../rendition';
+import { ManagerOrientation, ManagerReadMode } from '../managers/manager';
 
 import type Book from '../book';
-
-type GetViewManagerOptions = {
-  viewer: EpubElelementContain;
-  orientation?: ManagerOrientation;
-  readmode?: ManagerReadMode;
-  virtual?: boolean;
-};
 
 export default class EpubElelementContain extends HTMLElement {
   $head: HTMLElement;
   $container: HTMLElement;
-  book: Book | null = null;
-  manager: ViewManager;
   width: number = 0;
   height: number = 0;
   uuid: string = '';
+  book: Book | null = null;
+  rendition: Rendition;
 
   static get observedAttributes() {
     return ['uuid'];
@@ -38,7 +31,7 @@ export default class EpubElelementContain extends HTMLElement {
     this.$head = this.shadowRoot!.querySelector('epub-element-head')!;
     this.$container = this.shadowRoot!.querySelector('.epub-viewer-container')!;
 
-    this.manager = this.getManager({
+    this.rendition = new Rendition({
       viewer: this,
       orientation: ManagerOrientation.Portrait,
       readmode: ManagerReadMode.Continuous,
@@ -51,9 +44,7 @@ export default class EpubElelementContain extends HTMLElement {
     this.width = rect.width;
     this.height = rect.height;
 
-    console.log(this.width, this.height);
-
-    this.manager.render();
+    this.rendition.render();
   }
 
   _render() {
@@ -110,29 +101,5 @@ export default class EpubElelementContain extends HTMLElement {
         },
       }),
     );
-  }
-
-  getManager({
-    viewer,
-    readmode = ManagerReadMode.Continuous,
-    orientation = ManagerOrientation.Portrait,
-    virtual = true,
-  }: GetViewManagerOptions): ViewManager {
-    let manager: ViewManager;
-
-    console.log(readmode, orientation, virtual);
-
-    switch (readmode) {
-      case ManagerReadMode.Continuous:
-        manager = new ContinuousViewManager({
-          viewer,
-          virtual,
-        });
-        break;
-      default:
-        throw new Error('readmode not found');
-    }
-
-    return manager;
   }
 }

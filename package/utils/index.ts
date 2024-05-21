@@ -3,3 +3,4 @@ export * from './request';
 export * from './utils';
 export * from './xml';
 export * from './archive';
+export * from './task';

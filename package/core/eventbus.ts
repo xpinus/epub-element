@@ -2,14 +2,15 @@ import { singleton } from '../utils';
 
 type Effect = Function;
 
-export enum EventBusEventType {
-  VIEW_SIZE_CHANGE,
+export enum EventBusEventsEnum {
+  VIEW_SIZE_CHANGE, // 当一个view的尺寸发生变化
+  CONTENT_LINK_CLICKED, // 内容的跳转链接被点击
 }
 
 class EventBus {
-  eventMap: Map<EventBusEventType, Effect[]> = new Map();
+  eventMap: Map<EventBusEventsEnum, Effect[]> = new Map();
 
-  on(type: EventBusEventType, fn: Effect) {
+  on(type: EventBusEventsEnum, fn: Effect) {
     if (!this.eventMap.has(type)) {
       this.eventMap.set(type, []);
     }
@@ -17,7 +18,7 @@ class EventBus {
     this.eventMap.get(type)!.push(fn);
   }
 
-  off(type: EventBusEventType, fn?: Effect) {
+  off(type: EventBusEventsEnum, fn?: Effect) {
     if (!this.eventMap.has(type)) {
       return;
     }
@@ -32,7 +33,7 @@ class EventBus {
     }
   }
 
-  emit(type: EventBusEventType, ...args: any[]) {
+  emit(type: EventBusEventsEnum, ...args: any[]) {
     if (!this.eventMap.has(type)) {
       return;
     }

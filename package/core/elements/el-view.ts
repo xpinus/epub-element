@@ -1,6 +1,6 @@
 import { EpubElementHooks } from '../hooks';
 import { getGlobalInstance } from '../instances';
-import eventbus, { EventBusEventType } from '../eventbus';
+import eventbus, { EventBusEventsEnum } from '../eventbus';
 
 import type { EpubElementInstanceType } from '../epub-element';
 
@@ -60,7 +60,7 @@ export default class EpubView extends HTMLElement {
     const rect = this.getBoundingClientRect();
 
     if (rect.height != this.height || rect.width != this.width) {
-      eventbus.emit(EventBusEventType.VIEW_SIZE_CHANGE);
+      eventbus.emit(EventBusEventsEnum.VIEW_SIZE_CHANGE);
     }
     this.width = rect.width;
     this.height = rect.height;
@@ -116,10 +116,9 @@ export default class EpubView extends HTMLElement {
         return;
       }
 
-      link.onclick = function () {
-        // todo 实现cfi跳转
-        console.log(href);
-        return false;
+      link.onclick = function (e) {
+        e.preventDefault();
+        eventbus.emit(EventBusEventsEnum.CONTENT_LINK_CLICKED, href);
       };
     }.bind(this);
 

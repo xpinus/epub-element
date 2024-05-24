@@ -71,6 +71,8 @@ class EpubCFI {
       default:
         throw new TypeError('not a valid argument for EpubCFI');
     }
+
+    console.log(this.toString());
   }
 
   /**
@@ -273,7 +275,12 @@ class EpubCFI {
     } as CFI_Block;
     let currentNode = node;
 
-    while (currentNode && currentNode.parentNode && currentNode.parentNode.nodeType !== Node.COMMENT_NODE) {
+    while (
+      currentNode &&
+      currentNode.nodeName.toLowerCase() !== 'epub-view-body' &&
+      currentNode.parentNode &&
+      currentNode.parentNode.nodeType !== Node.COMMENT_NODE
+    ) {
       const step: any = {};
 
       if (currentNode.nodeType === Node.TEXT_NODE) {

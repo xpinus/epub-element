@@ -19,7 +19,7 @@ export default class Location {
    */
   getClosestElementFromCFI(view: EpubView, target: EpubCFI) {
     let el: HTMLElement = view;
-    let node: any = view.shadowRoot!;
+    let node: any = view.$body;
 
     while (target.path!.steps.length) {
       const step = target.path!.steps.shift()!;

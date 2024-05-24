@@ -19,8 +19,6 @@ class EpubElement {
   public book: Book;
 
   constructor() {
-    console.log('Hello, EpubNext!');
-
     this.book = new Book();
     this.uuid = createUUID();
     setGlobalInstance(this.uuid, this);
@@ -63,7 +61,7 @@ class EpubElement {
 
     el.replaceWith(epubEl);
 
-    console.log('mounted', epubEl);
+    (window as any).epub = epubEl;
   }
 
   /**

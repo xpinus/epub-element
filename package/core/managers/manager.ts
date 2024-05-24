@@ -1,9 +1,9 @@
 import Location from '../location';
 import { isBoolean } from '../../utils';
+import EpubCFI from '../epubcfi';
 
 import type EpubElelementContain from '../elements/el-contain';
 import type EpubView from '../elements/el-view';
-import type EpubCFI from '../epubcfi';
 
 export enum ManagerOrientation {
   Portrait = 'portrait',
@@ -20,7 +20,7 @@ type ViewManagerOptions = {
   virtual?: boolean;
 };
 
-export default class ViewManager {
+export default abstract class ViewManager {
   viewsCache: EpubView[] = []; // 已经渲染的视图的缓存
   currentViews: EpubView[] = []; // 当前渲染的视图
   viewer: EpubElelementContain;
@@ -44,20 +44,20 @@ export default class ViewManager {
   /**
    * @description 渲染
    */
-  render() {
-    console.warn('ViewManager need implement render');
-  }
+  abstract render(): void;
+
+  /**
+   * @description 计算视图的尺寸
+   */
+  abstract computeViewsSize(end?: number): number;
 
   /**
    * @description 显示指定的页面
    */
-  display(target: EpubCFI) {
-    console.warn('ViewManager need implement display: ', target);
-  }
+  abstract display(target: EpubCFI): void;
 
   /**
    * @description 插入所有的view
-   * @param wrapper view的容器
    */
   insertViews(wrapper: HTMLElement) {
     if (!this.viewer.book) {
@@ -76,17 +76,45 @@ export default class ViewManager {
     fragment.innerHTML = spineHtml;
 
     wrapper.append(...Array.from(fragment.children));
+    this.viewsCache = Array.from(wrapper.children) as EpubView[];
+    // this.viewsCache.forEach((view) => {
+    //   this.intersectionObserver.observe(view);
+    // });
   }
 
   /**
    * @description 监听view进入视图
-   * @param entries
    */
   onViewIntersect(entries: IntersectionObserverEntry[]) {
     console.log(entries);
+    this.currentViews = entries.filter((entry) => entry.isIntersecting).map((entry) => entry.target) as EpubView[];
   }
 
   destroy() {
     this.intersectionObserver.disconnect();
   }
+
+  get percent() {
+    return this.location.percent;
+  }
+
+  set percent(percent: number) {
+    console.warn('manager shuold implement percent set');
+  }
+
+  /**
+   * @description 根据指定的element获取对应的EpubCFI
+   */
+  getCFIFromElement(el: HTMLElement) {
+    const root = el.getRootNode() as ShadowRoot;
+    const view = root.host as EpubView;
+    const viewIndex = this.viewsCache.indexOf(view);
+
+    return new EpubCFI(el, `/6/${(viewIndex + 1) * 2}`);
+  }
+
+  /**
+   * @description 获取当前可视区域的EpubCFI
+   */
+  abstract getCurrentCFI(): EpubCFI;
 }

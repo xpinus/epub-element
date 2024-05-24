@@ -1,9 +1,9 @@
 import ViewManager from '../manager';
 import eventbus, { EventBusEventsEnum } from '../../eventbus';
 import { microTask, macroTask } from '../../../utils';
+import EpubCFI from '../../epubcfi';
 
 import type { EpubElelementContain, EpubView } from '../../elements';
-import type EpubCFI from '@/core/epubcfi';
 
 type ContinuousViewManagerOptions = {
   viewer: EpubElelementContain;
@@ -65,10 +65,8 @@ export default class ContinuousViewManager extends ViewManager {
       this.insertViews(this.vContent);
 
       microTask(() => {
-        this.viewsCache = Array.from(this.vContent!.children) as EpubView[];
         this.updateVirtualContentHeight();
         this.vContent!.innerHTML = '';
-
         this.setContent();
       });
 
@@ -81,9 +79,6 @@ export default class ContinuousViewManager extends ViewManager {
       });
     } else {
       this.insertViews(this.$layoutWrapper);
-      microTask(() => {
-        this.viewsCache = Array.from(this.$layoutWrapper.children) as EpubView[];
-      });
     }
 
     // 当前的进度
@@ -91,45 +86,53 @@ export default class ContinuousViewManager extends ViewManager {
   }
 
   /**
-   * @description 设置虚拟列表的实际内容（虚拟列表）
+   * @description （虚拟列表）当前需要渲染的内容跨度
+   * @returns [start, end] viewsCache中的索引范围
+   */
+  getSlice(): [number, number] {
+    let start = -1;
+    let end = -1;
+
+    const scrollTop = this.$layoutWrapper.scrollTop;
+    const containerHeight = this.$layoutWrapper.clientHeight;
+    const scrollHeight = this.$layoutWrapper.scrollHeight;
+
+    const startPos = Math.max(scrollTop - containerHeight, 0); // 缓冲区
+    const endPos = Math.min(scrollTop + containerHeight * 2, scrollHeight);
+
+    let height = 0;
+
+    for (let i = 0; i < this.viewsCache.length; i++) {
+      const view = this.viewsCache[i] as EpubView;
+      height += view.height;
+
+      if (start == -1 && height > startPos) {
+        start = i;
+      }
+      if (end == -1 && height > endPos) {
+        end = i;
+      }
+      if (start != -1 && end != -1) {
+        break;
+      }
+    }
+
+    if (start > end) {
+      // 初始高度计算误差需要更新
+      end = this.viewsCache.length - 1;
+      this.updateVirtualContentHeight();
+    }
+
+    return [start, end];
+  }
+
+  /**
+   * @description （虚拟列表）设置虚拟列表的实际内容
    */
   setContent() {
     this.rContent!.innerHTML = '';
-    const scrollTop = this.$layoutWrapper.scrollTop;
 
-    // 当前需要真是渲染的内容跨度
-    const getSlice = (scrollTop: number, containerHeight: number) => {
-      let height = 0;
-      let start = -1;
-      let end = -1;
-      const startPos = scrollTop;
-      const endPos = scrollTop + containerHeight;
-
-      for (let i = 0; i < this.viewsCache.length; i++) {
-        const view = this.viewsCache[i] as EpubView;
-        height += view.height;
-        if (start == -1 && height > startPos) {
-          start = i;
-        }
-        if (end == -1 && height > endPos) {
-          end = i;
-        }
-        if (start != -1 && end != -1) {
-          break;
-        }
-      }
-
-      if (start > end) {
-        // 初始高度计算误差需要更新
-        end = this.viewsCache.length - 1;
-        this.updateVirtualContentHeight();
-      }
-
-      return [start, end];
-    };
-
-    const [start, end] = getSlice(scrollTop, this.$layoutWrapper.clientHeight);
-
+    const [start, end] = this.getSlice();
     const renderList = this.viewsCache.slice(start, end + 1);
     this.rContent!.append(...renderList);
 
@@ -143,11 +146,11 @@ export default class ContinuousViewManager extends ViewManager {
    * @description 更新设置虚拟内容高度（虚拟列表）
    */
   updateVirtualContentHeight() {
-    this.vContent!.style.height = this.computeViewsDistance(this.viewsCache.length) + 'px';
+    this.vContent!.style.height = this.computeViewsSize() + 'px';
   }
 
-  computeViewsDistance(end: number) {
-    return this.viewsCache.slice(0, end).reduce((prev, next) => {
+  computeViewsSize(end?: number) {
+    return this.viewsCache.slice(0, end || this.viewsCache.length).reduce((prev, next) => {
       return (prev += next.height);
     }, 0);
   }
@@ -161,16 +164,16 @@ export default class ContinuousViewManager extends ViewManager {
 
     if (this.virtual) {
       this.$layoutWrapper.scrollTo({
-        top: this.computeViewsDistance(topViewIndex),
+        top: this.computeViewsSize(topViewIndex),
       });
 
       macroTask(() => {
         // 当view渲染出来后，再次调整滚动高度
-        const top = this.computeViewsDistance(topViewIndex);
+        const top = this.computeViewsSize(topViewIndex);
         let offset = 0;
         if (target.path) {
           const el = this.location.getClosestElementFromCFI(view, target);
-          offset = el.offsetTop - view.offsetTop;
+          offset = el.offsetTop; // epub-view-body被设置为offsetParent
         }
         this.$layoutWrapper.scrollTo({
           top: top + offset,
@@ -179,8 +182,67 @@ export default class ContinuousViewManager extends ViewManager {
     } else {
       const el = this.location.getClosestElementFromCFI(view, target);
       this.$layoutWrapper.scrollTo({
-        top: el.offsetTop,
+        top: view.offsetTop + el.offsetTop,
       });
     }
+  }
+
+  set percent(percent: number) {
+    this.$layoutWrapper.scrollTo({
+      top: this.$layoutWrapper.scrollHeight * percent,
+    });
+
+    this.location.percent = percent;
+  }
+
+  getCurrentCFI() {
+    const wrap = this.virtual ? this.rContent : this.$layoutWrapper;
+    const views = Array.from(wrap!.children) as EpubView[];
+
+    const containRect = this.$layoutWrapper.getBoundingClientRect();
+
+    // 将当前视图内位于 1/3 位置的view认为是current focus view
+    const focusPos = containRect.top + containRect.height / 3;
+
+    for (let i = 0; i < views.length; i++) {
+      const viewRect = views[i].getBoundingClientRect();
+      if (viewRect.top + viewRect.height >= focusPos) {
+        const view = views[i];
+        let target: HTMLElement = view.$body.querySelector('body') || view.$body;
+
+        const findFocusElement = (focus: HTMLElement): any => {
+          const children = Array.from(focus.children) as HTMLElement[];
+
+          for (let j = 0; j < children.length; j++) {
+            const childRect = children[j].getBoundingClientRect();
+            if (childRect.top + childRect.height >= focusPos) {
+              if (children[j].children.length) {
+                return findFocusElement(children[j])!;
+              }
+
+              return children[j];
+            }
+          }
+
+          return focus;
+        };
+
+        target = findFocusElement(target);
+
+        let spineIndex: number;
+        if (this.virtual) {
+          spineIndex = this.viewsCache.indexOf(view);
+        } else {
+          spineIndex = i;
+        }
+
+        const cfi = new EpubCFI(target, `/6/${(spineIndex + 1) * 2}`);
+        console.log(cfi.toString());
+
+        return cfi;
+      }
+    }
+
+    throw new Error('not found');
   }
 }

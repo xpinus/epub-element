@@ -41,21 +41,26 @@ class Rendition {
    * @param target spine href | epubcfi (EpubCFI) | percentage[0-1]
    */
   display(target: string | number | EpubCFI) {
+    // 参数标准化，统一转换为EpubCFI
     let cfi: EpubCFI | null = null;
 
     if (typeof target === 'string') {
       if (isCFIString(target)) {
+        // 传入的是epubcfi字符串
         cfi = new EpubCFI(target);
       } else {
+        // 传入的是spine href
         cfi = this.convertHrefToCfi(target);
       }
     } else if (!isNaN(Number(target))) {
+      // 百分比
       const percent = Number(target);
       if (percent > 0 && percent < 1) {
-        console.log(percent);
-        // todo percent跳转
+        this.manager.percent = percent;
+        return;
       }
     } else if (target instanceof EpubCFI) {
+      // EpubCFI对象实例
       cfi = target;
     }
 
@@ -63,11 +68,12 @@ class Rendition {
       throw new Error('invalid target: ' + target);
     }
 
-    console.log(cfi.toString());
-
     this.manager.display(cfi);
   }
 
+  /**
+   * @description 将内容中的spine链接转换为epubcfi
+   */
   convertHrefToCfi(href: string) {
     const reg = new RegExp(/^\/?(.*\.html)(#.*)$/);
 
@@ -98,7 +104,7 @@ class Rendition {
   }
 
   /**
-   * @description 获取manager
+   * @description 根据设置，获取对应的manager
    */
   getManager({
     viewer,
@@ -112,8 +118,6 @@ class Rendition {
     virtual?: boolean;
   }): ViewManager {
     let manager: ViewManager;
-
-    console.log(readmode, orientation, virtual);
 
     switch (readmode) {
       case ManagerReadMode.Continuous:

@@ -10,10 +10,11 @@ import type { EpubElementInstanceType } from '../epub-element';
 export default class EpubView extends HTMLElement {
   href: string;
   epubEl: EpubElementInstanceType;
-  template: HTMLTemplateElement;
   width: number = 0;
   height: number = 0;
   hooks: EpubElementHooks = new EpubElementHooks();
+  $head: HTMLElement;
+  $body: HTMLElement;
 
   static get observedAttributes() {
     return [];
@@ -34,23 +35,34 @@ export default class EpubView extends HTMLElement {
       throw new Error('no href for epub-view');
     }
 
-    this.template = document.createElement('template');
-    this.template.innerHTML = `
+    this.$head = document.createElement('epub-view-head');
+    this.$head.innerHTML = `
       <style>
         :host {
           display: block;
           overflow: hidden;
         }
+
+        epub-view-body {
+          position: relative;  // offsetParent
+        }
       </style>
-      ${this.epubEl.book.getSpineContent(this.href)}
     `;
 
-    const content = this.template.content.cloneNode(true) as HTMLElement;
+    this.$body = document.createElement('epub-view-body');
+
+    // 解析epub html内容
+    const domparser = new DOMParser();
+    const doc = domparser.parseFromString(this.epubEl.book.getSpineContent(this.href), 'text/html');
+    this.$body.append(...Array.from(doc.children[0].children));
+
+    const fragment = document.createDocumentFragment();
+    fragment.append(this.$head, this.$body);
 
     // 重映射a[href]的点击事件
-    this.replaceLinks(content);
+    this.replaceLinks(fragment);
 
-    this.attachShadow({ mode: 'open' }).appendChild(content);
+    this.attachShadow({ mode: 'open' }).appendChild(fragment);
   }
 
   /**
@@ -97,7 +109,7 @@ export default class EpubView extends HTMLElement {
   /**
    * 重写a[href]的点击行为
    */
-  private replaceLinks(content: HTMLElement) {
+  private replaceLinks(content: DocumentFragment) {
     const links = content.querySelectorAll('a[href]') as unknown as HTMLAnchorElement[];
     if (!links.length) {
       return;

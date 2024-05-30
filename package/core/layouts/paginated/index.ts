@@ -127,9 +127,6 @@ export default class PaginatedViewLayout extends ViewLayout {
     this.$rContent!.style.transform = `translateX(${transform}px)`;
   }
 
-  /**
-   * @description 获取当前关注的视图
-   */
   getCurrentViewIndex() {
     const wrap = this.virtual ? this.$rContent : this.$layoutWrapper;
     const views = Array.from(wrap!.children) as EpubView[];
@@ -257,21 +254,6 @@ export default class PaginatedViewLayout extends ViewLayout {
       to,
       smooth: true,
     });
-  }
-
-  nextView() {
-    const { viewIndex } = this.getCurrentViewIndex();
-
-    const spineIndex = viewIndex + 1;
-    if (spineIndex >= this.viewsCache.length) {
-      return;
-    }
-
-    const epubCfi = `epubcfi(/6/${(spineIndex + 1) * 2}!)`;
-
-    console.log(epubCfi);
-
-    this.display(new EpubCFI(epubCfi));
   }
 
   prevView() {

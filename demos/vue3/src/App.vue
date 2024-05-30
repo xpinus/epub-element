@@ -7,10 +7,10 @@ onMounted(() => {
   EpubElement.openEpub('history.epub', {}).then((ins: any) => {
     console.log('EpubElement', ins);
     ins.mount(document.getElementById('epub'), {
-      layout: 'paginated',
+      layout: 'scroll',
       virtual: true,
-      orientation: 'vertical',
-      class: 'test-style',
+      // orientation: 'vertical',
+      // class: 'test-style',
     });
   });
 

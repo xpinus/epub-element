@@ -99,9 +99,6 @@ export default class ScrollViewLayout extends ViewLayout {
     this.$rContent!.style.transform = `translateY(${transform}px)`;
   }
 
-  /**
-   * @description 获取当前关注的视图
-   */
   getCurrentViewIndex() {
     const wrap = this.virtual ? this.$rContent : this.$layoutWrapper;
     const views = Array.from(wrap!.children) as EpubView[];
@@ -212,11 +209,24 @@ export default class ScrollViewLayout extends ViewLayout {
     this._percent = percent;
   }
 
-  nextPage(): void {}
+  // 连续滚动模式下切换页好像并没有多少意义
+  nextPage(): void {
+    const from = this.$layoutWrapper.scrollTop;
+    const to = (Math.floor(from / this.viewer.height) + 1) * this.viewer.height;
+    this.toPosition({
+      to,
+      from,
+      smooth: true,
+    });
+  }
 
-  prevPage(): void {}
-
-  nextView(): void {}
-
-  prevView(): void {}
+  prevPage(): void {
+    const from = this.$layoutWrapper.scrollTop;
+    const to = (Math.floor(from / this.viewer.height) - 1) * this.viewer.height;
+    this.toPosition({
+      to,
+      from,
+      smooth: true,
+    });
+  }
 }

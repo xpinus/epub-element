@@ -157,6 +157,15 @@ export default abstract class ViewLayout {
   abstract _scrollTo(position: number): void;
 
   /**
+   * @description 获取当前关注的视图
+   */
+  abstract getCurrentViewIndex(): {
+    view: EpubView;
+    viewIndex: number;
+    focusPos: number;
+  };
+
+  /**
    * @description 获取当前可视区域的EpubCFI
    */
   abstract getCurrentCFI(): EpubCFI;
@@ -248,10 +257,31 @@ export default abstract class ViewLayout {
   /**
    * @description 跳转到下一个章节视图
    */
-  abstract nextView(): void;
+  nextView() {
+    const { viewIndex } = this.getCurrentViewIndex();
+
+    const spineIndex = viewIndex + 1;
+    if (spineIndex >= this.viewsCache.length) {
+      return;
+    }
+
+    const epubCfi = `epubcfi(/6/${(spineIndex + 1) * 2}!)`;
+
+    this.display(new EpubCFI(epubCfi));
+  }
 
   /**
    * @description 跳转到上一个章节视图
    */
-  abstract prevView(): void;
+  prevView() {
+    const { viewIndex } = this.getCurrentViewIndex();
+
+    const spineIndex = viewIndex - 1;
+    if (spineIndex < 0) {
+      return;
+    }
+    const epubCfi = `epubcfi(/6/${(spineIndex + 1) * 2}!)`;
+
+    this.display(new EpubCFI(epubCfi));
+  }
 }

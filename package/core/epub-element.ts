@@ -1,13 +1,16 @@
 import Book from './book';
 import { defineEpubViewElement } from './elements';
-import { createUUID } from '../utils';
+import { createUUID, isBoolean } from '../utils';
 import { setGlobalInstance, removeGlobalInstance } from './instances';
+import Rendition from './rendition';
+import { LayoutMode } from './layouts';
 
 import type { EpubElelementContain } from './elements';
+import type { RenditionOptions } from './rendition';
 
 export type EpubElementInstanceType = InstanceType<typeof EpubElement>;
 
-type EpubElementMountOptions = {
+type EpubElementMountOptions = RenditionOptions & {
   class?: string;
 };
 
@@ -58,6 +61,12 @@ class EpubElement {
     const epubEl = document.createElement('epub-element') as EpubElelementContain;
     epubEl.setAttribute('uuid', this.uuid);
     epubEl.book = this.book;
+    epubEl.rendition = new Rendition({
+      viewer: epubEl,
+      layout: options.layout || LayoutMode.Scroll,
+      virtual: isBoolean(options.virtual) ? options.virtual : true,
+      orientation: options.orientation,
+    });
 
     el.replaceWith(epubEl);
 

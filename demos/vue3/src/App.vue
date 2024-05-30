@@ -7,9 +7,9 @@ onMounted(() => {
   EpubElement.openEpub('history.epub', {}).then((ins: any) => {
     console.log('EpubElement', ins);
     ins.mount(document.getElementById('epub'), {
-      orientation: 'portrait', // landscape
-      loadmethod: 'dynamic', // full
-      readmode: 'continuous', // pagination
+      layout: 'paginated',
+      virtual: true,
+      orientation: 'vertical',
       class: 'test-style',
     });
   });
@@ -31,9 +31,9 @@ onMounted(() => {
 
 <style scoped>
 .book-wrap {
-  width: 800px;
-  height: 1040px;
-  margin: 100px auto;
+  width: 600px;
+  height: 800px;
+  margin: 80px auto;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.6);
 }
 .logo {

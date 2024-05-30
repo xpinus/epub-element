@@ -1,17 +1,14 @@
-import { EpubEventOptions } from './event';
-import Rendition from '../rendition';
-import { ManagerOrientation, ManagerReadMode } from '../managers/manager';
+import CustomElement from './customEl';
 
 import type Book from '../book';
+import type Rendition from '../rendition';
 
-export default class EpubElelementContain extends HTMLElement {
+export default class EpubElelementContain extends CustomElement {
   $head: HTMLElement;
   $container: HTMLElement;
-  width: number = 0;
-  height: number = 0;
   uuid: string = '';
   book: Book | null = null;
-  rendition: Rendition;
+  rendition: Rendition | null = null;
 
   static get observedAttributes() {
     return ['uuid'];
@@ -30,21 +27,13 @@ export default class EpubElelementContain extends HTMLElement {
     this._render();
     this.$head = this.shadowRoot!.querySelector('epub-element-head')!;
     this.$container = this.shadowRoot!.querySelector('.epub-viewer-container')!;
-
-    this.rendition = new Rendition({
-      viewer: this,
-      orientation: ManagerOrientation.Portrait,
-      readmode: ManagerReadMode.Continuous,
-      virtual: true,
-    });
   }
 
   connectedCallback() {
-    const rect = this.getBoundingClientRect();
-    this.width = rect.width;
-    this.height = rect.height;
+    this.setRect();
 
-    this.rendition.render();
+    // 渲染
+    this.rendition!.render();
   }
 
   _render() {
@@ -83,23 +72,5 @@ export default class EpubElelementContain extends HTMLElement {
     template.innerHTML = html;
 
     this.attachShadow({ mode: 'open' }).appendChild(template.content.cloneNode(true));
-  }
-
-  /**
-   * @description 触发事件
-   * @param target 目标元素
-   * @param eventtype 事件类型
-   * @param detail 传递的数据
-   */
-  dispatch({ type, target = this, value }: EpubEventOptions) {
-    this.dispatchEvent(
-      new CustomEvent(type, {
-        bubbles: true,
-        detail: {
-          target,
-          value,
-        },
-      }),
-    );
   }
 }

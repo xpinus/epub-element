@@ -1,31 +1,26 @@
-import ContinuousViewManager from './managers/continuous';
-import ViewManager, { ManagerOrientation, ManagerReadMode } from './managers/manager';
+import { LayoutMode, ScrollViewLayout, PaginatedViewLayout } from './layouts';
 import eventbus, { EventBusEventsEnum } from './eventbus';
 import { isCFIString } from '../utils';
 import EpubCFI from './epubcfi';
 
 import type EpubElelementContain from './elements/el-contain';
+import type { ViewLayout, ScrollViewLayoutOptions, PaginatedViewLayoutOptions } from './layouts';
 
-type RenditionOptions = {
-  viewer: EpubElelementContain;
-  orientation?: ManagerOrientation;
-  readmode?: ManagerReadMode;
-  virtual?: boolean;
-};
+type GetLayoutOptions = ScrollViewLayoutOptions &
+  PaginatedViewLayoutOptions & {
+    layout: LayoutMode;
+  };
+
+export type RenditionOptions = GetLayoutOptions;
 
 class Rendition {
   viewer: EpubElelementContain;
-  manager: ViewManager;
+  layout: ViewLayout;
 
   constructor(options: RenditionOptions) {
     this.viewer = options.viewer;
 
-    this.manager = this.getManager({
-      viewer: this.viewer,
-      orientation: ManagerOrientation.Portrait,
-      readmode: ManagerReadMode.Continuous,
-      virtual: true,
-    });
+    this.layout = this.getLayout(options);
 
     eventbus.on(EventBusEventsEnum.CONTENT_LINK_CLICKED, (href: string) => {
       this.display(href);
@@ -33,7 +28,7 @@ class Rendition {
   }
 
   render() {
-    this.manager.render();
+    this.layout.render();
   }
 
   /**
@@ -56,7 +51,7 @@ class Rendition {
       // 百分比
       const percent = Number(target);
       if (percent > 0 && percent < 1) {
-        this.manager.percent = percent;
+        this.layout.percent = percent;
         return;
       }
     } else if (target instanceof EpubCFI) {
@@ -68,7 +63,7 @@ class Rendition {
       throw new Error('invalid target: ' + target);
     }
 
-    this.manager.display(cfi);
+    this.layout.display(cfi);
   }
 
   /**
@@ -85,11 +80,11 @@ class Rendition {
     const chapter = m[1];
     const contentPos = m[2];
 
-    const viewIndex = this.manager.viewsCache.findIndex((view) => view.href === chapter);
+    const viewIndex = this.layout.viewsCache.findIndex((view) => view.href === chapter);
     if (viewIndex === -1) {
       throw new Error('view not found: ' + href);
     }
-    const view = this.manager.viewsCache[viewIndex];
+    const view = this.layout.viewsCache[viewIndex];
 
     let targetNode: HTMLElement;
     if (contentPos) {
@@ -106,22 +101,18 @@ class Rendition {
   /**
    * @description 根据设置，获取对应的manager
    */
-  getManager({
-    viewer,
-    readmode = ManagerReadMode.Continuous,
-    orientation = ManagerOrientation.Portrait,
-    virtual = true,
-  }: {
-    viewer: EpubElelementContain;
-    orientation?: ManagerOrientation;
-    readmode?: ManagerReadMode;
-    virtual?: boolean;
-  }): ViewManager {
-    let manager: ViewManager;
+  getLayout({ viewer, layout = LayoutMode.Scroll, virtual = true }: GetLayoutOptions): ViewLayout {
+    let _layout: ViewLayout;
 
-    switch (readmode) {
-      case ManagerReadMode.Continuous:
-        manager = new ContinuousViewManager({
+    switch (layout) {
+      case LayoutMode.Scroll:
+        _layout = new ScrollViewLayout({
+          viewer,
+          virtual,
+        });
+        break;
+      case LayoutMode.Paginated:
+        _layout = new PaginatedViewLayout({
           viewer,
           virtual,
         });
@@ -130,7 +121,7 @@ class Rendition {
         throw new Error('readmode not found');
     }
 
-    return manager;
+    return _layout;
   }
 }
 

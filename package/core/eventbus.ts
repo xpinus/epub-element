@@ -3,19 +3,20 @@ import { singleton } from '../utils';
 type Effect = Function;
 
 export enum EventBusEventsEnum {
+  VIEW_CONNECTED, // 当一个view被添加到文档中
   VIEW_SIZE_CHANGE, // 当一个view的尺寸发生变化
   CONTENT_LINK_CLICKED, // 内容的跳转链接被点击
 }
 
 class EventBus {
-  eventMap: Map<EventBusEventsEnum, Effect[]> = new Map();
+  eventMap: Map<EventBusEventsEnum, Set<Effect>> = new Map();
 
   on(type: EventBusEventsEnum, fn: Effect) {
     if (!this.eventMap.has(type)) {
-      this.eventMap.set(type, []);
+      this.eventMap.set(type, new Set([]));
     }
 
-    this.eventMap.get(type)!.push(fn);
+    this.eventMap.get(type)!.add(fn);
   }
 
   off(type: EventBusEventsEnum, fn?: Effect) {
@@ -26,10 +27,7 @@ class EventBus {
     if (!fn) {
       this.eventMap.delete(type);
     } else {
-      const index = this.eventMap.get(type)!.indexOf(fn);
-      if (index > -1) {
-        this.eventMap.get(type)!.splice(index, 1);
-      }
+      this.eventMap.get(type)!.delete(fn);
     }
   }
 

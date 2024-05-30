@@ -1,3 +1,4 @@
+import CustomElement from './customEl';
 import { EpubElementHooks } from '../hooks';
 import { getGlobalInstance } from '../instances';
 import eventbus, { EventBusEventsEnum } from '../eventbus';
@@ -7,17 +8,15 @@ import type { EpubElementInstanceType } from '../epub-element';
 /**
  * @description web component实现 epub 文件具体页面内容的渲染，以及样式隔离
  */
-export default class EpubView extends HTMLElement {
+export default class EpubView extends CustomElement {
   href: string;
   epubEl: EpubElementInstanceType;
-  width: number = 0;
-  height: number = 0;
   hooks: EpubElementHooks = new EpubElementHooks();
   $head: HTMLElement;
   $body: HTMLElement;
 
   static get observedAttributes() {
-    return [];
+    return ['style'];
   }
 
   constructor() {
@@ -36,46 +35,25 @@ export default class EpubView extends HTMLElement {
     }
 
     this.$head = document.createElement('epub-view-head');
-    this.$head.innerHTML = `
-      <style>
-        :host {
-          display: block;
-          overflow: hidden;
-        }
-
-        epub-view-body {
-          position: relative;  // offsetParent
-        }
-      </style>
-    `;
-
     this.$body = document.createElement('epub-view-body');
 
-    // 解析epub html内容
-    const domparser = new DOMParser();
-    const doc = domparser.parseFromString(this.epubEl.book.getSpineContent(this.href), 'text/html');
-    this.$body.append(...Array.from(doc.children[0].children));
-
-    const fragment = document.createDocumentFragment();
-    fragment.append(this.$head, this.$body);
-
-    // 重映射a[href]的点击事件
-    this.replaceLinks(fragment);
-
-    this.attachShadow({ mode: 'open' }).appendChild(fragment);
+    this.setHead();
+    this.setBody();
   }
 
   /**
    * 当元素被添加到文档中时调用
    */
   async connectedCallback() {
-    const rect = this.getBoundingClientRect();
+    const rect = this.setRect();
 
     if (rect.height != this.height || rect.width != this.width) {
       eventbus.emit(EventBusEventsEnum.VIEW_SIZE_CHANGE);
     }
-    this.width = rect.width;
-    this.height = rect.height;
+
+    if (this.parentElement && this.parentElement.className !== 'virtuallist-virtual-content') {
+      eventbus.emit(EventBusEventsEnum.VIEW_CONNECTED, this);
+    }
   }
 
   /**
@@ -100,6 +78,23 @@ export default class EpubView extends HTMLElement {
    */
   attributeChangedCallback(name: string, oldValue: string, newValue: string) {
     switch (name) {
+      case 'style':
+        if (this.style.width) {
+          const width = parseInt(this.style.width);
+          if (width !== this.width) {
+            this.width = width;
+            eventbus.emit(EventBusEventsEnum.VIEW_SIZE_CHANGE);
+          }
+        }
+
+        if (this.style.height) {
+          const height = parseInt(this.style.height);
+          if (height !== this.height) {
+            this.height = height;
+            eventbus.emit(EventBusEventsEnum.VIEW_SIZE_CHANGE);
+          }
+        }
+        break;
       default:
         console.log(name, oldValue, newValue);
         break;
@@ -137,5 +132,39 @@ export default class EpubView extends HTMLElement {
     for (let i = 0; i < links.length; i++) {
       replaceLink(links[i]);
     }
+  }
+
+  setHead() {
+    this.$head.innerHTML = `
+    <style>
+      :host {
+        display: block;
+        overflow: hidden;
+      }
+
+      epub-view-body {
+        position: relative;  // offsetParent
+      }
+
+      body {
+        ${this.getAttribute('body-style')}
+      }
+    </style>
+  `;
+  }
+
+  setBody() {
+    // 解析epub html内容
+    const domparser = new DOMParser();
+    const doc = domparser.parseFromString(this.epubEl.book.getSpineContent(this.href), 'text/html');
+    this.$body.append(...Array.from(doc.children[0].children));
+
+    const fragment = document.createDocumentFragment();
+    fragment.append(this.$head, this.$body);
+
+    // 重映射a[href]的点击事件
+    this.replaceLinks(fragment);
+
+    this.attachShadow({ mode: 'open' }).replaceChildren(fragment);
   }
 }

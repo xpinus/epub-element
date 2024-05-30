@@ -110,3 +110,15 @@ export function isCFIString(cfi: any) {
 
   return true;
 }
+
+/**
+ * @description 判断是否为空
+ */
+export function isEmpty(target: any) {
+  if (!target) return true;
+  else if (target instanceof Array) return target.length === 0;
+  else if (target instanceof Map || target instanceof Set) return target.size === 0;
+  else {
+    return Object.keys(target).length === 0;
+  }
+}

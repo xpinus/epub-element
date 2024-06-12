@@ -40,6 +40,7 @@
   "dependencies": {
     "@epub-element/element": "workspace:*",
     "@zip.js/zip.js": "^2.7.44",
+    "mark-stage": "^0.1.2",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
@@ -60,5 +61,6 @@
     "rimraf": "^5.0.7",
     "typescript": "^5.4.5",
     "typescript-eslint": "^7.8.0"
-  }
+  },
+  "packageManager": "pnpm@9.3.0+sha512.ee7b93e0c2bd11409c6424f92b866f31d3ea1bef5fbe47d3c7500cdc3c9668833d2e55681ad66df5b640c61fa9dc25d546efa54d76d7f8bf54b13614ac293631"
 }

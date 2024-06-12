@@ -32,7 +32,7 @@ export async function build(cb) {
         exclude: /node_modules/,
         target: 'es2018',
         sourceMap: true,
-        minify: false,
+        minify: true,
       }),
     ],
     external: [...Object.keys(pkg.dependencies)],

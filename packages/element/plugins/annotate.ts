@@ -1,7 +1,10 @@
-import EpubCFI from './epubcfi';
+import EpubCFI from '../core/epubcfi';
 import { createUUID } from '../utils';
-import EpubView from './elements/el-view';
-import Rendition from './rendition';
+import EpubView from '../core/elements/el-view';
+import Rendition from '../core/rendition';
+
+import Plugin, { PluginOption } from './plugin';
+import type { EpubElementInstanceType } from '../core/epub-element';
 
 // 支持的批注类型
 export enum AnnotationType {
@@ -61,13 +64,21 @@ export class Annotation {
   }
 }
 
-class Annotations {
+class Annotate extends Plugin {
   annotations: Map<string, Annotation> = new Map();
   rendition: Rendition;
 
-  constructor(rendition: Rendition) {
-    this.rendition = rendition;
+  constructor(opt: PluginOption) {
+    const epubEl = opt.epubEl;
+    super({ epubEl }, 'annotate');
+
+    if (!epubEl.rendition) {
+      throw new Error('rendition not exist');
+    }
+    this.rendition = epubEl.rendition;
   }
+
+  beforePluginDestroy(): void {}
 
   add(type: AnnotationType, cfiRange: EpubCFI | Range, classList?: string[]) {
     const hash = createUUID();
@@ -148,4 +159,6 @@ class Annotations {
   underline(cfi: EpubCFI, classList: string[] = []) {}
 }
 
-export default Annotations;
+Annotate.pluginName = 'annotate';
+
+export default Annotate;

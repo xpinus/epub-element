@@ -29,12 +29,15 @@ onMounted(() => {
         if (!selection.isCollapsed) {
           selecting = true;
           var range = selection.getRange();
-          var annotation = ins.rendition.annotations.add('highlight', range);
-          annotation.element.addEventListener('click', (e) => {
-            console.log('target', e.target);
 
-            ins.rendition.annotations.remove(annotation);
-          });
+          // 使用内置的批注插件，高亮选中
+          var annotate = ins.plugins['annotate'];
+          var annotation = annotate.add('highlight', range, ['highlight']);
+          // annotation.element.addEventListener('click', (e) => {
+          //   console.log('target', e.target);
+
+          //   annotate.remove(annotation);
+          // });
           // Clear the selection
           selection._selection.removeAllRanges();
           // Reset the selecting state in the next tick.
@@ -50,6 +53,7 @@ onMounted(() => {
     ins.mount(document.getElementById('epub'), {
       layout: 'scroll',
       virtual: true,
+      plugins: 'annotate',
     });
   });
 });
@@ -80,5 +84,11 @@ onMounted(() => {
 }
 .logo.vue:hover {
   filter: drop-shadow(0 0 2em #42b883aa);
+}
+</style>
+
+<style>
+.highlight {
+  fill: #44c99080;
 }
 </style>

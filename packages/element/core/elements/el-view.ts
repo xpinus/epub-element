@@ -1,7 +1,7 @@
 import CustomElement from './customEl';
 import { EventBusEventsEnum } from '../eventbus';
 import { MarkStage, Highlight, Underline } from 'mark-stage';
-import { Annotation, AnnotationType } from '../annotations';
+import { Annotation, AnnotationType } from '../../plugins/annotate';
 import EpubElement from '../epub-element';
 
 import type { EpubElementInstanceType } from '../epub-element';
@@ -207,7 +207,6 @@ export default class EpubView extends CustomElement {
       const target: HTMLElement = this.$body.querySelector('body') || this.$body;
 
       this.stage = new MarkStage(target, this.$body);
-      console.log('stage', this.stage);
     }
 
     if (this.stage.annotations.has(annot.hash)) return;

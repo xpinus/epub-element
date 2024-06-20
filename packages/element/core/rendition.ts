@@ -1,7 +1,6 @@
 import { LayoutMode, ScrollViewLayout, PaginatedViewLayout } from './layouts';
 import { isCFIString } from '../utils';
 import EpubCFI from './epubcfi';
-import Annotations from './annotations';
 import { EventBusEventsEnum } from './eventbus';
 
 import type { EpubElementInstanceType } from './epub-element';
@@ -17,13 +16,11 @@ export type RenditionOptions = GetLayoutOptions;
 class Rendition {
   _instance: EpubElementInstanceType;
   layout: ViewLayout;
-  annotations: Annotations;
 
   constructor(options: RenditionOptions) {
     this._instance = options.epubEL;
 
     this.layout = this.getLayout(options);
-    this.annotations = new Annotations(this);
 
     this._instance.event.on(EventBusEventsEnum.CONTENT_LINK_CLICKED, (href: string) => {
       this.display(href);

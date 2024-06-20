@@ -6,3 +6,4 @@ export * from './archive';
 export * from './task';
 export * from './animate';
 export * from './shadow';
+export * from './xss';

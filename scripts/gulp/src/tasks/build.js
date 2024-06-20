@@ -3,9 +3,10 @@ import path from 'path';
 import { rollup } from 'rollup';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
-import esbuild from 'rollup-plugin-esbuild';
+import typescript from 'rollup-plugin-typescript2';
 
-import { PKG_ROOT, PKG_OUTPUT } from '../utils';
+import esbuild from 'rollup-plugin-esbuild';
+import { PKG_ROOT, PKG_OUTPUT, ROOT_PATH } from '../utils';
 import pkg from '../../../../package.json';
 
 const buildOutputOptionsList = [
@@ -27,12 +28,15 @@ export async function build(cb) {
     plugins: [
       nodeResolve(),
       commonjs(),
+      typescript({
+        tsconfig: path.resolve(ROOT_PATH, 'tsconfig.json'),
+      }), // 用它来生成.d.ts，esbuild插件说是可以但好像并没有起作用
       esbuild({
         include: /\.[jt]sx?$/,
         exclude: /node_modules/,
         target: 'es2018',
         sourceMap: true,
-        minify: true,
+        // minify: true,
       }),
     ],
     external: [...Object.keys(pkg.dependencies)],

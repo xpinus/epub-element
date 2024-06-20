@@ -1,5 +1,3 @@
-import { EpubEventOptions } from './event';
-
 export default class CustomElement extends HTMLElement {
   width: number = 0;
   height: number = 0;
@@ -20,12 +18,9 @@ export default class CustomElement extends HTMLElement {
   }
 
   /**
-   * @description 触发事件
-   * @param target 目标元素
-   * @param eventtype 事件类型
-   * @param detail 传递的数据
+   * @description 触发自定义事件
    */
-  dispatch({ type, target = this, value }: EpubEventOptions) {
+  dispatch(type: string, value?: any, target = this) {
     this.dispatchEvent(
       new CustomEvent(type, {
         bubbles: true,

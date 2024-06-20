@@ -1,34 +1,29 @@
 import ViewLayout from '../layout';
-import eventbus, { EventBusEventsEnum } from '../../eventbus';
-import { microTask, macroTask, isEmpty } from '../../../utils';
+
+import { macroTask, isEmpty } from '../../../utils';
 import EpubCFI from '../../epubcfi';
 
 import type { EpubView } from '../../elements';
 import type { ViewLayoutOptions } from '../layout';
 import type { Spine } from '../../book';
 
-export type PaginatedViewLayoutOptions = ViewLayoutOptions;
+export type ScrollViewLayoutOptions = ViewLayoutOptions;
 
-const GAP = 16; // 间隔
-
-export default class PaginatedViewLayout extends ViewLayout {
-  constructor(options: PaginatedViewLayoutOptions) {
+export default class ScrollViewLayout extends ViewLayout {
+  constructor(options: ScrollViewLayoutOptions) {
     super(options);
 
     // 样式
     this.setStyle();
-
-    this.handleKeyboard = this.handleKeyboard.bind(this);
-    this.bindEvents();
   }
 
   setStyle() {
-    this.$layoutWrapper.classList.add('epub-view-layout--paginated');
+    this.$layoutWrapper.classList.add('epub-view-layout--scroll');
     const style = document.createElement('style');
     style.innerHTML = `
-      .epub-view-layout--paginated {
+      .epub-view-layout--scroll {
         height: 100%;
-        overflow: hidden;
+        overflow: auto;
         position: relative;
       }
 
@@ -38,65 +33,42 @@ export default class PaginatedViewLayout extends ViewLayout {
         height: 100%;
         left: 0;
         top: 0;
-        display: flex;
       }
 
       .virtuallist-virtual-content {
         width: 100%;
         height: 100%;
         overflow: auto;
-        display: flex;
       }
     `;
-    this.viewer.$head.append(style);
+    this.$el.$head.append(style);
   }
 
   epubViewHtmlTemplate(spine: Spine) {
-    const attrs = {
-      style: 'flex-shrink: 0;',
-      'body-style': `
-      column-fill: auto;
-      column-gap: ${GAP * 2}px;
-      column-width: ${this.viewer.width}px;
-      width: ${this.viewer.width}px;
-      height: ${this.viewer.height}px;
-      padding-top: 20px !important;
-      padding-bottom: 20px !important;
-      padding-left: ${GAP}px !important;
-      padding-right: ${GAP}px !important;
-      box-sizing: border-box;
-      margin: 0 !important;
-      `,
-    };
-
-    const attrStr = Object.entries(attrs)
-      .map(([key, value]) => `${key}="${value}"`)
-      .join(' ');
-
-    return `<epub-view idref="${spine.idref}" href="${spine.href}" root="${this.viewer.uuid}" ${attrStr}></epub-view>`;
+    return `<epub-view idref="${spine.idref}" href="${spine.href}" root="${this.$el.uuid}"></epub-view>`;
   }
 
   getRealContentViewsSlice(): [number, number] {
     let start = -1;
     let end = -1;
 
-    const scrollLeft = this.$layoutWrapper.scrollLeft;
-    const containerWidth = this.$layoutWrapper.clientWidth;
-    const scrollWidth = this.$layoutWrapper.scrollWidth;
+    const scrollTop = this.$layoutWrapper.scrollTop;
+    const containerHeight = this.$layoutWrapper.clientHeight;
+    const scrollHeight = this.$layoutWrapper.scrollHeight;
 
-    const startPos = Math.max(scrollLeft - containerWidth, 0); // 缓冲区
-    const endPos = Math.min(scrollLeft + containerWidth * 2, scrollWidth);
+    const startPos = Math.max(scrollTop - containerHeight, 0); // 缓冲区
+    const endPos = Math.min(scrollTop + containerHeight * 2, scrollHeight);
 
-    let width = 0;
+    let height = 0;
 
     for (let i = 0; i < this.viewsCache.length; i++) {
       const view = this.viewsCache[i] as EpubView;
-      width += view.width;
+      height += view.height;
 
-      if (start == -1 && width > startPos) {
+      if (start == -1 && height > startPos) {
         start = i;
       }
-      if (end == -1 && width > endPos) {
+      if (end == -1 && height > endPos) {
         end = i;
       }
       if (start != -1 && end != -1) {
@@ -114,17 +86,17 @@ export default class PaginatedViewLayout extends ViewLayout {
   }
 
   updateVirtualContent() {
-    this.$vContent!.style.width = this.computeViewsSize() + 'px';
+    this.$vContent!.style.height = this.computeViewsSize() + 'px';
   }
 
   computeViewsSize(end?: number) {
     return this.viewsCache.slice(0, typeof end === 'number' ? end : this.viewsCache.length).reduce((prev, next) => {
-      return (prev += next.width);
+      return (prev += next.height);
     }, 0);
   }
 
   setRealContentTransform(transform: number) {
-    this.$rContent!.style.transform = `translateX(${transform}px)`;
+    this.$rContent!.style.transform = `translateY(${transform}px)`;
   }
 
   getCurrentViewIndex() {
@@ -132,12 +104,14 @@ export default class PaginatedViewLayout extends ViewLayout {
     const views = Array.from(wrap!.children) as EpubView[];
 
     const containRect = this.$layoutWrapper.getBoundingClientRect();
-    const focusPos = containRect.left;
+
+    // 将当前视图内位于 1/3 位置的view认为是current focus view
+    const focusPos = containRect.top + containRect.height / 3;
 
     let viewIndex = -1;
     for (let i = 0; i < views.length; i++) {
       const viewRect = views[i].getBoundingClientRect();
-      if (viewRect.left + viewRect.width > focusPos) {
+      if (viewRect.top + viewRect.height >= focusPos) {
         viewIndex = i;
         break;
       }
@@ -164,7 +138,7 @@ export default class PaginatedViewLayout extends ViewLayout {
 
       for (let j = 0; j < children.length; j++) {
         const childRect = children[j].getBoundingClientRect();
-        if (childRect.left >= focusPos) {
+        if (childRect.top + childRect.height >= focusPos) {
           if (children[j].children.length) {
             return findFocusElement(children[j])!;
           }
@@ -179,14 +153,14 @@ export default class PaginatedViewLayout extends ViewLayout {
     target = findFocusElement(target);
 
     const cfi = new EpubCFI(target, `/6/${(viewIndex + 1) * 2}`);
-    console.log(cfi.toString());
+    // console.log(cfi.toString());
 
     return cfi;
   }
 
   _scrollTo(position: number): void {
     this.$layoutWrapper.scrollTo({
-      left: position,
+      top: position,
     });
   }
 
@@ -202,23 +176,22 @@ export default class PaginatedViewLayout extends ViewLayout {
         to: this.computeViewsSize(viewIndex),
       });
 
-      setTimeout(() => {
+      macroTask(() => {
         // 当view渲染出来后，再次调整滚动高度
-        const left = this.computeViewsSize(viewIndex);
+        const top = this.computeViewsSize(viewIndex);
         let offset = 0;
         if (!isEmpty(target.path)) {
           const el = this.getClosestElementFromCFI(view, target)!;
-          offset = Math.floor(el.offsetLeft / this.viewer.width) * this.viewer.width;
+          offset = el.offsetTop;
         }
-
         this.toPosition({
-          to: left + offset,
+          to: top + offset,
         });
-      }, 20);
+      });
     } else {
       const el = this.getClosestElementFromCFI(view, target);
       this.toPosition({
-        to: view.offsetLeft + (el ? el.offsetLeft : 0),
+        to: view.offsetTop + (el ? el.offsetTop : 0),
       });
     }
   }
@@ -236,74 +209,24 @@ export default class PaginatedViewLayout extends ViewLayout {
     this._percent = percent;
   }
 
-  nextPage() {
-    const from = this.$layoutWrapper.scrollLeft;
-    const to = from + this.viewer.width;
+  // 连续滚动模式下切换页好像并没有多少意义
+  nextPage(): void {
+    const from = this.$layoutWrapper.scrollTop;
+    const to = (Math.floor(from / this.$el.height) + 1) * this.$el.height;
     this.toPosition({
-      from,
       to,
+      from,
       smooth: true,
     });
   }
 
-  prevPage() {
-    const from = this.$layoutWrapper.scrollLeft;
-    const to = from - this.viewer.width;
+  prevPage(): void {
+    const from = this.$layoutWrapper.scrollTop;
+    const to = (Math.floor(from / this.$el.height) - 1) * this.$el.height;
     this.toPosition({
-      from,
       to,
+      from,
       smooth: true,
     });
-  }
-
-  prevView() {
-    const { viewIndex } = this.getCurrentViewIndex();
-
-    const spineIndex = viewIndex - 1;
-    if (spineIndex < 0) {
-      return;
-    }
-    const epubCfi = `epubcfi(/6/${(spineIndex + 1) * 2}!)`;
-
-    this.display(new EpubCFI(epubCfi));
-  }
-
-  /**
-   * @description 处理键盘事件
-   */
-  handleKeyboard(e: KeyboardEvent) {
-    // 监听右方向键->，下一页
-    if (e.key === 'ArrowRight') {
-      this.nextPage();
-    }
-
-    // 监听左方向键<-，上一页
-    if (e.key === 'ArrowLeft') {
-      this.prevPage();
-    }
-  }
-
-  /**
-   * @description 绑定事件
-   */
-  bindEvents() {
-    eventbus.on(EventBusEventsEnum.VIEW_CONNECTED, (view: EpubView) => {
-      const scrollWidth = view.$body.querySelector('body')?.scrollWidth || 0;
-      const width = scrollWidth > this.viewer.width ? scrollWidth + 16 : this.viewer.width;
-      view.css({
-        width: width + 'px',
-      });
-    });
-
-    document.body.addEventListener('keydown', this.handleKeyboard);
-  }
-
-  /**
-   * @description 解绑事件
-   */
-  unbindEvents() {
-    eventbus.off(EventBusEventsEnum.VIEW_CONNECTED);
-
-    document.body.removeEventListener('keydown', this.handleKeyboard);
   }
 }

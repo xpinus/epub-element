@@ -33,9 +33,7 @@ class Book {
   public spine: Spine[] = [];
   public guide: Guide = new Map();
 
-  constructor() {
-    console.log('Hello, book!');
-  }
+  constructor() {}
 
   /**
    * @description 打开并解析epub文件

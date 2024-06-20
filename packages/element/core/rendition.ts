@@ -1,9 +1,10 @@
 import { LayoutMode, ScrollViewLayout, PaginatedViewLayout } from './layouts';
-import eventbus, { EventBusEventsEnum } from './eventbus';
 import { isCFIString } from '../utils';
 import EpubCFI from './epubcfi';
+import Annotations from './annotations';
+import { EventBusEventsEnum } from './eventbus';
 
-import type EpubElelementContain from './elements/el-contain';
+import type { EpubElementInstanceType } from './epub-element';
 import type { ViewLayout, ScrollViewLayoutOptions, PaginatedViewLayoutOptions } from './layouts';
 
 type GetLayoutOptions = ScrollViewLayoutOptions &
@@ -14,15 +15,17 @@ type GetLayoutOptions = ScrollViewLayoutOptions &
 export type RenditionOptions = GetLayoutOptions;
 
 class Rendition {
-  viewer: EpubElelementContain;
+  _instance: EpubElementInstanceType;
   layout: ViewLayout;
+  annotations: Annotations;
 
   constructor(options: RenditionOptions) {
-    this.viewer = options.viewer;
+    this._instance = options.epubEL;
 
     this.layout = this.getLayout(options);
+    this.annotations = new Annotations(this);
 
-    eventbus.on(EventBusEventsEnum.CONTENT_LINK_CLICKED, (href: string) => {
+    this._instance.event.on(EventBusEventsEnum.CONTENT_LINK_CLICKED, (href: string) => {
       this.display(href);
     });
   }
@@ -101,19 +104,19 @@ class Rendition {
   /**
    * @description 根据设置，获取对应的manager
    */
-  getLayout({ viewer, layout = LayoutMode.Scroll, virtual = true }: GetLayoutOptions): ViewLayout {
+  getLayout({ epubEL, layout = LayoutMode.Scroll, virtual = true }: GetLayoutOptions): ViewLayout {
     let _layout: ViewLayout;
 
     switch (layout) {
       case LayoutMode.Scroll:
         _layout = new ScrollViewLayout({
-          viewer,
+          epubEL,
           virtual,
         });
         break;
       case LayoutMode.Paginated:
         _layout = new PaginatedViewLayout({
-          viewer,
+          epubEL,
           virtual,
         });
         break;

@@ -1,14 +1,13 @@
 import CustomElement from './customEl';
+import EpubElement from '../epub-element';
 
-import type Book from '../book';
-import type Rendition from '../rendition';
+import type { EpubElementInstanceType } from '../epub-element';
 
 export default class EpubElelementContain extends CustomElement {
   $head: HTMLElement;
   $container: HTMLElement;
   uuid: string = '';
-  book: Book | null = null;
-  rendition: Rendition | null = null;
+  _instance: EpubElementInstanceType | null = null;
 
   static get observedAttributes() {
     return ['uuid'];
@@ -18,13 +17,17 @@ export default class EpubElelementContain extends CustomElement {
     switch (name) {
       case 'uuid':
         this.uuid = newValue;
+        if (!EpubElement.hasInstance(this.uuid)) {
+          throw new Error('no epub element with uuid: ' + this.uuid);
+        }
+        this._instance = EpubElement.getInstance(this.uuid)!;
         break;
     }
   }
 
   constructor() {
     super();
-    this._render();
+    this._create();
     this.$head = this.shadowRoot!.querySelector('epub-element-head')!;
     this.$container = this.shadowRoot!.querySelector('.epub-viewer-container')!;
   }
@@ -33,10 +36,10 @@ export default class EpubElelementContain extends CustomElement {
     this.setRect();
 
     // 渲染
-    this.rendition!.render();
+    this._instance!.rendition!.render();
   }
 
-  _render() {
+  _create() {
     const html = `
       <epub-element-head>
         <style>

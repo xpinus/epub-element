@@ -1,23 +1,56 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
 import HelloWorld from './components/HelloWorld.vue';
-import EpubElement from '@epub-element/element';
+import EpubElement, { EpubView, ShadowSelection } from '@epub-element/element';
 
 onMounted(() => {
-  EpubElement.openEpub('history.epub', {}).then((ins: any) => {
+  EpubElement.openEpub('history.epub').then((ins: any) => {
     console.log('EpubElement', ins);
+
+    // 注册hooks
+    // ins.hooks.content = (...args: any[]) => {
+    //   console.log(args);
+    // };
+
+    // 事件监听
+    ins.event.on('rendered', function () {
+      console.log('epub rendered');
+
+      // 在view被创建后，添加对应dom的事件
+      // 例如在选中后高亮内容
+      var selecting = false;
+      // 在使用mouseup等事件时要注意，mouse最终释放的位置，如果不是选中的view可能会导致错误
+      ins.$el.shadowRoot.addEventListener('mouseup', (e: MouseEvent) => {
+        console.log(e.target);
+        const view = e.target!;
+
+        var selection = new ShadowSelection(view.shadowRoot);
+
+        if (!selection.isCollapsed) {
+          selecting = true;
+          var range = selection.getRange();
+          var annotation = ins.rendition.annotations.add('highlight', range);
+          annotation.element.addEventListener('click', (e) => {
+            console.log('target', e.target);
+
+            ins.rendition.annotations.remove(annotation);
+          });
+          // Clear the selection
+          selection._selection.removeAllRanges();
+          // Reset the selecting state in the next tick.
+          setTimeout(function () {
+            selecting = false;
+          }, 0);
+        }
+      });
+      // };
+    });
+
+    // 挂载
     ins.mount(document.getElementById('epub'), {
       layout: 'scroll',
       virtual: true,
-      // orientation: 'vertical',
-      // class: 'test-style',
     });
-  });
-
-  document.querySelector('.book-wrap')!.addEventListener('rendered', (e) => {
-    const target = (e as CustomEvent).detail.target;
-
-    console.log(target.width, target.height);
   });
 });
 </script>

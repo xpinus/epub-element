@@ -41,7 +41,8 @@ class EpubCFI {
   spineIndex: number;
   base: null | CFI_Block;
   path: null | CFI_Block;
-  range: boolean;
+  _range: Range | null = null;
+  isRange: boolean;
   start: null | CFI_Block;
   end: null | CFI_Block;
 
@@ -49,7 +50,7 @@ class EpubCFI {
     this.str = '';
     this.base = null;
     this.spineIndex = -1;
-    this.range = false;
+    this.isRange = false;
     this.path = null;
     this.start = null;
     this.end = null;
@@ -61,7 +62,12 @@ class EpubCFI {
         this.str = cfiFrom as string;
         return extend(this, this.parse(this.str));
       case 'range':
-        break;
+        if (!base) {
+          throw new TypeError('base path is required for node');
+        }
+        this.base = this.parseCFIBlock(base);
+
+        return extend(this, this.fromRange(cfiFrom as Range, this.base));
       case 'node':
         if (!base) {
           throw new TypeError('base path is required for node');
@@ -71,8 +77,6 @@ class EpubCFI {
       default:
         throw new TypeError('not a valid argument for EpubCFI');
     }
-
-    console.log(this.toString());
   }
 
   /**
@@ -102,7 +106,7 @@ class EpubCFI {
   parse(cfiStr: string) {
     const cfi = {
       spineIndex: -1,
-      range: false,
+      isRange: false,
       base: {} as CFI_Block,
       path: {} as CFI_Block,
       start: null as CFI_Block | null,
@@ -125,7 +129,7 @@ class EpubCFI {
     }
 
     if (rangeCFI) {
-      cfi.range = true;
+      cfi.isRange = true;
       cfi.start = this.parseCFIBlock(rangeCFI[0]);
       cfi.end = this.parseCFIBlock(rangeCFI[1]);
     }
@@ -252,7 +256,7 @@ class EpubCFI {
       spineIndex: base.steps[1].index,
       base,
       path: {} as CFI_Block,
-      range: false,
+      isRange: false,
       start: null,
       end: null,
     };
@@ -265,7 +269,7 @@ class EpubCFI {
   /**
    * 获得到节点的path
    */
-  pathTo(node: Node) {
+  pathTo(node: Node, offset?: number) {
     const segment = {
       steps: [],
       terminal: {
@@ -304,6 +308,18 @@ class EpubCFI {
       currentNode = currentNode.parentNode;
     }
 
+    if (offset && segment.terminal) {
+      segment.terminal.offset = offset;
+
+      // Make sure we are getting to a textNode if there is an offset
+      if (segment.steps[segment.steps.length - 1].type != 'text') {
+        segment.steps.push({
+          type: 'text',
+          index: 0,
+        });
+      }
+    }
+
     return segment;
   }
 
@@ -322,7 +338,7 @@ class EpubCFI {
     cfiStr += this.segmentString(this.path);
 
     // Add Range, if present
-    if (this.range && this.start && this.end) {
+    if (this.isRange && this.start && this.end) {
       cfiStr += ',' + this.segmentString(this.start) + ',' + this.segmentString(this.end);
     }
 
@@ -366,6 +382,182 @@ class EpubCFI {
     }
 
     return segmentString;
+  }
+
+  /**
+   * @description 从Range创建CFI
+   */
+  fromRange(range: Range, base: CFI_Block) {
+    const cfi = {
+      spineIndex: base.steps[1].index,
+      base,
+      path: {} as CFI_Block,
+      isRange: false,
+      start: null as unknown as CFI_Block,
+      end: null as unknown as CFI_Block,
+    };
+
+    const start = range.startContainer;
+    const end = range.endContainer;
+
+    const startOffset = range.startOffset;
+    const endOffset = range.endOffset;
+
+    if (range.collapsed) {
+      cfi.path = this.pathTo(start, startOffset);
+    } else {
+      cfi.isRange = true;
+
+      cfi.start = this.pathTo(start, startOffset);
+      cfi.end = this.pathTo(end, endOffset);
+
+      // Create a new empty path
+      cfi.path = {
+        steps: [],
+        terminal: null as unknown as CFI_Terminal,
+      };
+
+      // Push steps that are shared between start and end to the common path
+      const len = cfi.start.steps.length;
+      let i;
+
+      for (i = 0; i < len; i++) {
+        if (this.isEqualStep(cfi.start.steps[i], cfi.end.steps[i])) {
+          if (i === len - 1) {
+            // Last step is equal, check terminals
+            if (cfi.start.terminal === cfi.end.terminal) {
+              // CFI's are equal
+              cfi.path.steps.push(cfi.start.steps[i]);
+              // Not a range
+              cfi.isRange = false;
+            }
+          } else {
+            cfi.path.steps.push(cfi.start.steps[i]);
+          }
+        } else {
+          break;
+        }
+      }
+
+      cfi.start.steps = cfi.start.steps.slice(cfi.path.steps.length);
+      cfi.end.steps = cfi.end.steps.slice(cfi.path.steps.length);
+
+      this._range = range;
+    }
+
+    return cfi;
+  }
+
+  isEqualStep(stepA: CFI_Step, stepB: CFI_Step) {
+    if (!stepA || !stepB) {
+      return false;
+    }
+
+    if (stepA.index === stepB.index && stepA.id === stepB.id && stepA.type === stepB.type) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * @description convert EpubCFI to dom Range
+   */
+  toRange() {
+    if (this._range) return this._range;
+
+    // 创建 Range 对象
+    const range = new Range();
+
+    // Range 起始位置在段落 2
+    // range.setStartBefore(paragraphs[1]);
+
+    // Range 结束位置在段落 3
+    // range.setEndAfter(paragraphs[2]);
+
+    // var doc = _doc || document;
+    // var range;
+    // var start, end, startContainer, endContainer;
+    // var cfi = this;
+    // var startSteps, endSteps;
+    // var needsIgnoring = ignoreClass
+    // 	? doc.querySelector("." + ignoreClass) != null
+    // 	: false;
+    // var missed;
+
+    // if (typeof doc.createRange !== "undefined") {
+    // 	range = doc.createRange();
+    // } else {
+    // 	range = new RangeObject();
+    // }
+
+    // if (cfi.range) {
+    // 	start = cfi.start;
+    // 	startSteps = cfi.path.steps.concat(start.steps);
+    // 	startContainer = this.findNode(
+    // 		startSteps,
+    // 		doc,
+    // 		needsIgnoring ? ignoreClass : null
+    // 	);
+    // 	end = cfi.end;
+    // 	endSteps = cfi.path.steps.concat(end.steps);
+    // 	endContainer = this.findNode(
+    // 		endSteps,
+    // 		doc,
+    // 		needsIgnoring ? ignoreClass : null
+    // 	);
+    // } else {
+    // 	start = cfi.path;
+    // 	startSteps = cfi.path.steps;
+    // 	startContainer = this.findNode(
+    // 		cfi.path.steps,
+    // 		doc,
+    // 		needsIgnoring ? ignoreClass : null
+    // 	);
+    // }
+
+    // if (startContainer) {
+    // 	try {
+    // 		if (start.terminal.offset != null) {
+    // 			range.setStart(startContainer, start.terminal.offset);
+    // 		} else {
+    // 			range.setStart(startContainer, 0);
+    // 		}
+    // 	} catch (e) {
+    // 		missed = this.fixMiss(
+    // 			startSteps,
+    // 			start.terminal.offset,
+    // 			doc,
+    // 			needsIgnoring ? ignoreClass : null
+    // 		);
+    // 		range.setStart(missed.container, missed.offset);
+    // 	}
+    // } else {
+    // 	console.log("No startContainer found for", this.toString());
+    // 	// No start found
+    // 	return null;
+    // }
+
+    // if (endContainer) {
+    // 	try {
+    // 		if (end.terminal.offset != null) {
+    // 			range.setEnd(endContainer, end.terminal.offset);
+    // 		} else {
+    // 			range.setEnd(endContainer, 0);
+    // 		}
+    // 	} catch (e) {
+    // 		missed = this.fixMiss(
+    // 			endSteps,
+    // 			cfi.end.terminal.offset,
+    // 			doc,
+    // 			needsIgnoring ? ignoreClass : null
+    // 		);
+    // 		range.setEnd(missed.container, missed.offset);
+    // 	}
+    // }
+
+    // doc.defaultView.getSelection().addRange(range);
+    return range;
   }
 }
 

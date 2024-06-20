@@ -1,4 +1,4 @@
-import type { Metadata, Manifest, Spine, Guide } from '@/core/book';
+import type { Metadata, Manifest, Spine, Guide } from '../core/book';
 
 export class XMLParser {
   private static parser = new DOMParser();

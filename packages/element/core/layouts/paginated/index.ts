@@ -1,29 +1,34 @@
 import ViewLayout from '../layout';
-
-import { macroTask, isEmpty } from '../../../utils';
+import { EventBusEventsEnum } from '../../eventbus';
+import { microTask, macroTask, isEmpty } from '../../../utils';
 import EpubCFI from '../../epubcfi';
 
 import type { EpubView } from '../../elements';
 import type { ViewLayoutOptions } from '../layout';
 import type { Spine } from '../../book';
 
-export type ScrollViewLayoutOptions = ViewLayoutOptions;
+export type PaginatedViewLayoutOptions = ViewLayoutOptions;
 
-export default class ScrollViewLayout extends ViewLayout {
-  constructor(options: ScrollViewLayoutOptions) {
+const GAP = 16; // 间隔
+
+export default class PaginatedViewLayout extends ViewLayout {
+  constructor(options: PaginatedViewLayoutOptions) {
     super(options);
 
     // 样式
     this.setStyle();
+
+    this.handleKeyboard = this.handleKeyboard.bind(this);
+    this.bindEvents();
   }
 
   setStyle() {
-    this.$layoutWrapper.classList.add('epub-view-layout--scroll');
+    this.$layoutWrapper.classList.add('epub-view-layout--paginated');
     const style = document.createElement('style');
     style.innerHTML = `
-      .epub-view-layout--scroll {
+      .epub-view-layout--paginated {
         height: 100%;
-        overflow: auto;
+        overflow: hidden;
         position: relative;
       }
 
@@ -33,42 +38,65 @@ export default class ScrollViewLayout extends ViewLayout {
         height: 100%;
         left: 0;
         top: 0;
+        display: flex;
       }
 
       .virtuallist-virtual-content {
         width: 100%;
         height: 100%;
         overflow: auto;
+        display: flex;
       }
     `;
-    this.viewer.$head.append(style);
+    this.$el.$head.append(style);
   }
 
   epubViewHtmlTemplate(spine: Spine) {
-    return `<epub-view idref="${spine.idref}" href="${spine.href}" root="${this.viewer.uuid}"></epub-view>`;
+    const attrs = {
+      style: 'flex-shrink: 0;',
+      'body-style': `
+      column-fill: auto;
+      column-gap: ${GAP * 2}px;
+      column-width: ${this.$el.width}px;
+      width: ${this.$el.width}px;
+      height: ${this.$el.height}px;
+      padding-top: 20px !important;
+      padding-bottom: 20px !important;
+      padding-left: ${GAP}px !important;
+      padding-right: ${GAP}px !important;
+      box-sizing: border-box;
+      margin: 0 !important;
+      `,
+    };
+
+    const attrStr = Object.entries(attrs)
+      .map(([key, value]) => `${key}="${value}"`)
+      .join(' ');
+
+    return `<epub-view idref="${spine.idref}" href="${spine.href}" root="${this.$el.uuid}" ${attrStr}></epub-view>`;
   }
 
   getRealContentViewsSlice(): [number, number] {
     let start = -1;
     let end = -1;
 
-    const scrollTop = this.$layoutWrapper.scrollTop;
-    const containerHeight = this.$layoutWrapper.clientHeight;
-    const scrollHeight = this.$layoutWrapper.scrollHeight;
+    const scrollLeft = this.$layoutWrapper.scrollLeft;
+    const containerWidth = this.$layoutWrapper.clientWidth;
+    const scrollWidth = this.$layoutWrapper.scrollWidth;
 
-    const startPos = Math.max(scrollTop - containerHeight, 0); // 缓冲区
-    const endPos = Math.min(scrollTop + containerHeight * 2, scrollHeight);
+    const startPos = Math.max(scrollLeft - containerWidth, 0); // 缓冲区
+    const endPos = Math.min(scrollLeft + containerWidth * 2, scrollWidth);
 
-    let height = 0;
+    let width = 0;
 
     for (let i = 0; i < this.viewsCache.length; i++) {
       const view = this.viewsCache[i] as EpubView;
-      height += view.height;
+      width += view.width;
 
-      if (start == -1 && height > startPos) {
+      if (start == -1 && width > startPos) {
         start = i;
       }
-      if (end == -1 && height > endPos) {
+      if (end == -1 && width > endPos) {
         end = i;
       }
       if (start != -1 && end != -1) {
@@ -86,17 +114,17 @@ export default class ScrollViewLayout extends ViewLayout {
   }
 
   updateVirtualContent() {
-    this.$vContent!.style.height = this.computeViewsSize() + 'px';
+    this.$vContent!.style.width = this.computeViewsSize() + 'px';
   }
 
   computeViewsSize(end?: number) {
     return this.viewsCache.slice(0, typeof end === 'number' ? end : this.viewsCache.length).reduce((prev, next) => {
-      return (prev += next.height);
+      return (prev += next.width);
     }, 0);
   }
 
   setRealContentTransform(transform: number) {
-    this.$rContent!.style.transform = `translateY(${transform}px)`;
+    this.$rContent!.style.transform = `translateX(${transform}px)`;
   }
 
   getCurrentViewIndex() {
@@ -104,14 +132,12 @@ export default class ScrollViewLayout extends ViewLayout {
     const views = Array.from(wrap!.children) as EpubView[];
 
     const containRect = this.$layoutWrapper.getBoundingClientRect();
-
-    // 将当前视图内位于 1/3 位置的view认为是current focus view
-    const focusPos = containRect.top + containRect.height / 3;
+    const focusPos = containRect.left;
 
     let viewIndex = -1;
     for (let i = 0; i < views.length; i++) {
       const viewRect = views[i].getBoundingClientRect();
-      if (viewRect.top + viewRect.height >= focusPos) {
+      if (viewRect.left + viewRect.width > focusPos) {
         viewIndex = i;
         break;
       }
@@ -138,7 +164,7 @@ export default class ScrollViewLayout extends ViewLayout {
 
       for (let j = 0; j < children.length; j++) {
         const childRect = children[j].getBoundingClientRect();
-        if (childRect.top + childRect.height >= focusPos) {
+        if (childRect.left >= focusPos) {
           if (children[j].children.length) {
             return findFocusElement(children[j])!;
           }
@@ -153,14 +179,14 @@ export default class ScrollViewLayout extends ViewLayout {
     target = findFocusElement(target);
 
     const cfi = new EpubCFI(target, `/6/${(viewIndex + 1) * 2}`);
-    // console.log(cfi.toString());
+    console.log(cfi.toString());
 
     return cfi;
   }
 
   _scrollTo(position: number): void {
     this.$layoutWrapper.scrollTo({
-      top: position,
+      left: position,
     });
   }
 
@@ -176,22 +202,23 @@ export default class ScrollViewLayout extends ViewLayout {
         to: this.computeViewsSize(viewIndex),
       });
 
-      macroTask(() => {
+      setTimeout(() => {
         // 当view渲染出来后，再次调整滚动高度
-        const top = this.computeViewsSize(viewIndex);
+        const left = this.computeViewsSize(viewIndex);
         let offset = 0;
         if (!isEmpty(target.path)) {
           const el = this.getClosestElementFromCFI(view, target)!;
-          offset = el.offsetTop;
+          offset = Math.floor(el.offsetLeft / this.$el.width) * this.$el.width;
         }
+
         this.toPosition({
-          to: top + offset,
+          to: left + offset,
         });
-      });
+      }, 20);
     } else {
       const el = this.getClosestElementFromCFI(view, target);
       this.toPosition({
-        to: view.offsetTop + (el ? el.offsetTop : 0),
+        to: view.offsetLeft + (el ? el.offsetLeft : 0),
       });
     }
   }
@@ -209,24 +236,74 @@ export default class ScrollViewLayout extends ViewLayout {
     this._percent = percent;
   }
 
-  // 连续滚动模式下切换页好像并没有多少意义
-  nextPage(): void {
-    const from = this.$layoutWrapper.scrollTop;
-    const to = (Math.floor(from / this.viewer.height) + 1) * this.viewer.height;
+  nextPage() {
+    const from = this.$layoutWrapper.scrollLeft;
+    const to = from + this.$el.width;
     this.toPosition({
-      to,
       from,
+      to,
       smooth: true,
     });
   }
 
-  prevPage(): void {
-    const from = this.$layoutWrapper.scrollTop;
-    const to = (Math.floor(from / this.viewer.height) - 1) * this.viewer.height;
+  prevPage() {
+    const from = this.$layoutWrapper.scrollLeft;
+    const to = from - this.$el.width;
     this.toPosition({
-      to,
       from,
+      to,
       smooth: true,
     });
+  }
+
+  prevView() {
+    const { viewIndex } = this.getCurrentViewIndex();
+
+    const spineIndex = viewIndex - 1;
+    if (spineIndex < 0) {
+      return;
+    }
+    const epubCfi = `epubcfi(/6/${(spineIndex + 1) * 2}!)`;
+
+    this.display(new EpubCFI(epubCfi));
+  }
+
+  /**
+   * @description 处理键盘事件
+   */
+  handleKeyboard(e: KeyboardEvent) {
+    // 监听右方向键->，下一页
+    if (e.key === 'ArrowRight') {
+      this.nextPage();
+    }
+
+    // 监听左方向键<-，上一页
+    if (e.key === 'ArrowLeft') {
+      this.prevPage();
+    }
+  }
+
+  /**
+   * @description 绑定事件
+   */
+  bindEvents() {
+    this._instance.event.on(EventBusEventsEnum.VIEW_CONNECTED, (view: EpubView) => {
+      const scrollWidth = view.$body.querySelector('body')?.scrollWidth || 0;
+      const width = scrollWidth > this.$el.width ? scrollWidth + 16 : this.$el.width;
+      view.css({
+        width: width + 'px',
+      });
+    });
+
+    document.body.addEventListener('keydown', this.handleKeyboard);
+  }
+
+  /**
+   * @description 解绑事件
+   */
+  unbindEvents() {
+    this._instance.event.off(EventBusEventsEnum.VIEW_CONNECTED);
+
+    document.body.removeEventListener('keydown', this.handleKeyboard);
   }
 }

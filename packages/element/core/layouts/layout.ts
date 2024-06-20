@@ -1,11 +1,12 @@
 import { isBoolean, microTask, animate } from '../../utils';
 import EpubCFI from '../epubcfi';
-import eventbus, { EventBusEventsEnum } from '../eventbus';
+import { EventBusEventsEnum } from '../eventbus';
 
-import type EpubElelementContain from '../elements/el-contain';
+import type { EpubElementInstanceType } from '../epub-element';
 import type EpubView from '../elements/el-view';
 import type { TimingEquationsType, TimingFunction } from '../../utils';
 import type { Spine } from '../book';
+import { EpubElelementContain } from '../elements';
 
 type SmoothConfig = {
   duration?: number;
@@ -18,35 +19,41 @@ const DEFAULT_TIMING = 'easeOutSine';
 let POSITION_ANIMATE_LOCK = false;
 
 export type ViewLayoutOptions = {
-  viewer: EpubElelementContain;
+  epubEL: EpubElementInstanceType;
   virtual?: boolean;
 };
 
 export default abstract class ViewLayout {
   viewsCache: EpubView[] = []; // 已经渲染的视图的缓存
   currentViews: EpubView[] = []; // 当前渲染的视图
-  viewer: EpubElelementContain;
+  _instance: EpubElementInstanceType;
   $layoutWrapper: HTMLDivElement;
   virtual: boolean = true;
   $vContent: HTMLElement | null = null;
   $rContent: HTMLElement | null = null;
   _percent: number = 0;
+  $el: EpubElelementContain;
 
   constructor(options: ViewLayoutOptions) {
-    this.viewer = options.viewer;
+    this._instance = options.epubEL;
     this.virtual = isBoolean(options.virtual) ? options.virtual! : true;
 
     const layoutWrapper = document.createElement('div');
     layoutWrapper.className = 'epub-view-layout';
     this.$layoutWrapper = layoutWrapper;
-    this.viewer.$container.append(layoutWrapper);
+
+    if (!this._instance.$el) {
+      throw new Error('epub-element not found');
+    }
+    this.$el = this._instance.$el;
+    this.$el.$container.append(layoutWrapper);
   }
 
   /**
    * @description 渲染
    */
   render() {
-    if (!this.viewer.book) {
+    if (!this._instance.book) {
       throw new Error("epub's book not found");
     }
 
@@ -73,19 +80,21 @@ export default abstract class ViewLayout {
         this.updateRealContent();
       });
 
-      eventbus.on(EventBusEventsEnum.VIEW_SIZE_CHANGE, () => {
+      this._instance.event.on(EventBusEventsEnum.VIEW_SIZE_CHANGE, () => {
         this.updateVirtualContent();
       });
     } else {
       this.insertViews(this.$layoutWrapper);
     }
+
+    this._instance.event.emit(EventBusEventsEnum.RENDERED, this);
   }
 
   /**
    * @description 插入所有的view
    */
   insertViews(wrapper: HTMLElement, attrs?: { [key: string]: string | number }) {
-    if (!this.viewer.book) {
+    if (!this._instance.book) {
       throw new Error("epub's book not found");
     }
 
@@ -96,7 +105,7 @@ export default abstract class ViewLayout {
           .join(' ')
       : '';
 
-    const book = this.viewer.book;
+    const book = this._instance.book;
     const fragment = document.createElement('div');
     const spineHtml = `
           ${book.spine

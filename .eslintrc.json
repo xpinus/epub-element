@@ -27,6 +27,7 @@
     "@typescript-eslint/no-empty-function": "off", // 禁止空函数
     "@typescript-eslint/no-non-null-assertion": "off", // 不允许使用后缀运算符的非空断言(!)
     "@typescript-eslint/no-unused-vars": "off", //
+    "@typescript-eslint/no-this-alias": "off",
 
     "prettier/prettier": "error"
   }

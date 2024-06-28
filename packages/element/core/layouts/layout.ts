@@ -73,11 +73,11 @@ export default abstract class ViewLayout {
       microTask(() => {
         this.updateVirtualContent();
         this.$vContent!.innerHTML = '';
-        this.updateRealContent();
+        this.patchRealContent();
       });
 
       this.$layoutWrapper.addEventListener('scroll', () => {
-        this.updateRealContent();
+        this.patchRealContent();
       });
 
       this._instance.event.on(EventBusEventsEnum.VIEW_SIZE_CHANGE, () => {
@@ -139,12 +139,49 @@ export default abstract class ViewLayout {
   /**
    * @description （虚拟列表）设置虚拟列表的实际内容
    */
-  updateRealContent() {
-    this.$rContent!.innerHTML = '';
-
+  patchRealContent() {
     const [start, end] = this.getRealContentViewsSlice();
-    const renderList = this.viewsCache.slice(start, end + 1);
-    this.$rContent!.append(...renderList);
+
+    const currentViews = Array.from(this.$rContent!.childNodes) as EpubView[];
+
+    let newStart = start;
+    const newEnd = end;
+    let oldStart = 0;
+    let oldEnd = -1;
+
+    if (currentViews.length) {
+      oldStart = this.viewsCache.indexOf(currentViews[0]);
+      oldEnd = this.viewsCache.indexOf(currentViews[currentViews.length - 1]);
+    }
+
+    const prependCache = [];
+
+    // 看作两个有序链表的公共部分
+    while (newStart <= newEnd && oldStart <= oldEnd) {
+      if (newStart < oldStart) {
+        // 在
+        prependCache.push(this.viewsCache[newStart]);
+        newStart++;
+      } else if (newStart === oldStart) {
+        newStart++;
+        oldStart++;
+      } else if (newStart > oldStart) {
+        this.viewsCache[oldStart].remove();
+        oldStart++;
+      }
+    }
+
+    this.$rContent!.prepend(...prependCache);
+
+    while (oldStart <= oldEnd) {
+      this.viewsCache[oldStart].remove();
+      oldStart++;
+    }
+
+    while (newStart <= newEnd) {
+      this.$rContent!.append(this.viewsCache[newStart]);
+      newStart++;
+    }
 
     const transformY = this.computeViewsSize(start);
     this.setRealContentTransform(transformY);

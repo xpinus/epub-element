@@ -186,8 +186,8 @@ export default abstract class ViewLayout {
     let el: HTMLElement | null = null;
     let node: any = view.$body;
 
-    while (target.path!.steps.length) {
-      const step = target.path!.steps.shift()!;
+    for (let i = 0; i < target.path!.steps.length; i++) {
+      const step = target.path!.steps[i];
       if (step.type === 'element') {
         const children = Array.from(node.children);
         node = children[step.index];

@@ -3,6 +3,7 @@ import { EventBusEventsEnum } from '../eventbus';
 import { MarkStage, Highlight, Underline } from 'mark-stage';
 import { Annotation, AnnotationType } from '../../plugins/annotate';
 import EpubElement from '../epub-element';
+import { macroTask } from '../../utils';
 
 import type { EpubElementInstanceType } from '../epub-element';
 
@@ -29,6 +30,7 @@ export default class EpubView extends CustomElement {
   hooks: EpubViewHooks;
   $head: HTMLElement;
   $body: HTMLElement;
+  connected: boolean = false;
   stage: MarkStage | undefined;
 
   static get observedAttributes() {
@@ -65,20 +67,22 @@ export default class EpubView extends CustomElement {
    * 当元素被添加到文档中时调用
    */
   async connectedCallback() {
-    const rect = this.setRect();
-
-    if (rect.height != this.height || rect.width != this.width) {
-      this._instance.event.emit(EventBusEventsEnum.VIEW_SIZE_CHANGE);
-    }
-
     if (this.parentElement && this.parentElement.className !== 'virtuallist-virtual-content') {
       this._instance.event.emit(EventBusEventsEnum.VIEW_CONNECTED, this);
-      // console.log('connectedCallback');
     }
 
     if (this.hooks.connected) {
       this.hooks.connected(this);
     }
+
+    if (this.stage) {
+      macroTask(() => {
+        this.stage!.render();
+      });
+    }
+    this.connected = true;
+
+    this.dispatch('connected');
   }
 
   /**
@@ -88,6 +92,8 @@ export default class EpubView extends CustomElement {
     if (this.hooks.disconnected) {
       this.hooks.disconnected(this);
     }
+
+    this.connected = false;
   }
 
   /**
@@ -103,20 +109,8 @@ export default class EpubView extends CustomElement {
   attributeChangedCallback(name: string, oldValue: string, newValue: string) {
     switch (name) {
       case 'style':
-        if (this.style.width) {
-          const width = parseInt(this.style.width);
-          if (width !== this.width) {
-            this.width = width;
-            this._instance.event.emit(EventBusEventsEnum.VIEW_SIZE_CHANGE);
-          }
-        }
-
-        if (this.style.height) {
-          const height = parseInt(this.style.height);
-          if (height !== this.height) {
-            this.height = height;
-            this._instance.event.emit(EventBusEventsEnum.VIEW_SIZE_CHANGE);
-          }
+        if (this.style.width || this.style.height) {
+          this._instance.event.emit(EventBusEventsEnum.VIEW_SIZE_CHANGE);
         }
         break;
       default:

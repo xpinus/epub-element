@@ -70,7 +70,7 @@ class Annotate extends Plugin {
 
   constructor(opt: PluginOption) {
     const epubEl = opt.epubEl;
-    super({ epubEl }, 'annotate');
+    super({ epubEl });
 
     if (!epubEl.rendition) {
       throw new Error('rendition not exist');

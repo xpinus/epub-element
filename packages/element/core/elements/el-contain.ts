@@ -33,8 +33,6 @@ export default class EpubElelementContain extends CustomElement {
   }
 
   connectedCallback() {
-    this.setRect();
-
     // 渲染
     this._instance!.rendition!.render();
   }

@@ -1,20 +1,29 @@
 export default class CustomElement extends HTMLElement {
-  width: number = 0;
-  height: number = 0;
+  _width: number = 0;
+  _height: number = 0;
 
   constructor() {
     super();
   }
 
   /**
-   * @description 设置元素的宽高
+   * @description 获取元素的宽高
    */
-  setRect() {
-    const rect = this.getBoundingClientRect();
-    this.width = rect.width;
-    this.height = rect.height;
+  get width() {
+    const width = this.getBoundingClientRect().width;
+    if (width) {
+      this._width = width;
+    }
 
-    return rect;
+    return this._width;
+  }
+
+  get height() {
+    const height = this.getBoundingClientRect().height;
+    if (height) {
+      this._height = height;
+    }
+    return this._height;
   }
 
   /**

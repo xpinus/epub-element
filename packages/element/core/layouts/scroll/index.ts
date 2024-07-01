@@ -153,7 +153,6 @@ export default class ScrollViewLayout extends ViewLayout {
     target = findFocusElement(target);
 
     const cfi = new EpubCFI(target, `/6/${(viewIndex + 1) * 2}`);
-    // console.log(cfi.toString());
 
     return cfi;
   }
@@ -170,28 +169,46 @@ export default class ScrollViewLayout extends ViewLayout {
   display(target: EpubCFI) {
     const viewIndex = target.base!.steps[1].index;
     const view = this.viewsCache[viewIndex];
+    const el = this.getClosestElementFromCFI(view, target)!;
+
+    // 获取偏移
+    const offset = () => {
+      const rangeOffset = target.start?.terminal?.offset || 0;
+      const { fontSize, lineHeight } = window.getComputedStyle(el);
+      const width = el.clientWidth;
+      let targetTextOffset = Math.ceil((parseInt(fontSize) * rangeOffset) / width) * parseInt(lineHeight);
+      targetTextOffset = isFinite(targetTextOffset) ? targetTextOffset : 0;
+
+      return this.computeViewsSize(viewIndex) + el.offsetTop + targetTextOffset - this.$el.height / 4;
+    };
 
     if (this.virtual) {
-      this.toPosition({
-        to: this.computeViewsSize(viewIndex),
-      });
-
-      macroTask(() => {
-        // 当view渲染出来后，再次调整滚动高度
-        const top = this.computeViewsSize(viewIndex);
-        let offset = 0;
-        if (!isEmpty(target.path)) {
-          const el = this.getClosestElementFromCFI(view, target)!;
-          offset = el.offsetTop;
-        }
+      if (view.connected) {
+        // 如果view已经被渲染在页面上，则直接滚动到对应位置
         this.toPosition({
-          to: top + offset,
+          to: offset(),
         });
-      });
+      } else {
+        // 先移动到大概位置，等待view渲染出来后再移动到实际位置
+        view.addEventListener(
+          'connected',
+          () => {
+            macroTask(() => {
+              this.toPosition({
+                to: offset(),
+              });
+            });
+          },
+          { once: true },
+        );
+
+        this.toPosition({
+          to: this.computeViewsSize(viewIndex),
+        });
+      }
     } else {
-      const el = this.getClosestElementFromCFI(view, target);
       this.toPosition({
-        to: view.offsetTop + (el ? el.offsetTop : 0),
+        to: offset(),
       });
     }
   }

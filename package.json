@@ -40,7 +40,7 @@
   "dependencies": {
     "@epub-element/element": "workspace:*",
     "@zip.js/zip.js": "^2.7.44",
-    "mark-stage": "^0.1.5",
+    "mark-stage": "^0.2.0",
     "uuid": "^9.0.1"
   },
   "devDependencies": {

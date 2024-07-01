@@ -19,9 +19,8 @@ abstract class Plugin {
 
   public static pluginName: string;
 
-  constructor(opt: PluginOption, pluginName: string) {
+  constructor(opt: PluginOption) {
     this._instance = opt.epubEl;
-    Plugin.pluginName = pluginName;
   }
 
   abstract beforePluginDestroy(): void;

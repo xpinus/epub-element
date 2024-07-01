@@ -3,9 +3,11 @@ import { onMounted } from 'vue';
 import HelloWorld from './components/HelloWorld.vue';
 import EpubElement, { EpubView, ShadowSelection } from '@epub-element/element';
 
+let epubEl = null;
+
 onMounted(() => {
   EpubElement.openEpub('history.epub').then((ins: any) => {
-    console.log('EpubElement', ins);
+    epubEl = ins;
 
     // 注册hooks
     // ins.hooks.content = (...args: any[]) => {
@@ -53,10 +55,25 @@ onMounted(() => {
     ins.mount(document.getElementById('epub'), {
       layout: 'scroll',
       virtual: true,
-      plugins: 'annotate',
+      plugins: ['annotate', 'search'],
     });
   });
 });
+
+function handleSearch() {
+  epubEl?.plugins['search'].search('先生').then((res) => {
+    console.log('搜索结果:', res);
+    console.log(res.map((item) => item.annoation.cfi.toString()));
+  });
+}
+
+function handleNext() {
+  epubEl?.plugins['search'].nextMatch();
+}
+
+function handlePrev() {
+  epubEl?.plugins['search'].prevMatch();
+}
 </script>
 
 <template>
@@ -64,6 +81,16 @@ onMounted(() => {
     <div id="epub"></div>
   </div>
   <HelloWorld msg="epub-element's vue test" />
+  <div class="search-test">
+    <button @click="handleSearch">搜索</button>
+    <input
+      type="text"
+      name=""
+      id="searchInput"
+    />
+    <button @click="handlePrev">上一个</button>
+    <button @click="handleNext">下一个</button>
+  </div>
 </template>
 
 <style scoped>

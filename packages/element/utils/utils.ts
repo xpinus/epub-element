@@ -122,3 +122,33 @@ export function isEmpty(target: any) {
     return Object.keys(target).length === 0;
   }
 }
+
+export interface AbortablePromise<T = unknown> extends Promise<T> {
+  abort: (reason?: any) => void;
+}
+
+/**
+ * 返回一个可以中断的Promise
+ * https://juejin.cn/post/7043348598595158030?from=search-suggest
+ * @returns abort 中断函数
+ */
+export function abortablePromiseFactory(executor: ConstructorParameters<typeof Promise>[0] | Promise<unknown>): AbortablePromise {
+  let abort = () => {}; //用于中断Promise的方法
+
+  //构造一个原始的Promise实例
+  const originPromise = executor instanceof Promise ? executor : new Promise(executor);
+
+  //构造一个专门用来中断的Promise实例
+  const promiseToAbort = new Promise((_, reject) => {
+    abort = (reason: string = 'promise been aborted') => {
+      reject(reason);
+    };
+  });
+
+  // 使用Promise.race构造可中断的Promise
+  const abortablePromise = Promise.race([originPromise, promiseToAbort]);
+
+  (abortablePromise as AbortablePromise).abort = abort;
+
+  return abortablePromise as AbortablePromise;
+}

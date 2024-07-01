@@ -9,7 +9,7 @@ import type { Spine } from '../../book';
 
 export type PaginatedViewLayoutOptions = ViewLayoutOptions;
 
-const GAP = 16; // 间隔
+const DEFAULT_GAP = 16; // 间隔
 
 export default class PaginatedViewLayout extends ViewLayout {
   constructor(options: PaginatedViewLayoutOptions) {
@@ -30,6 +30,7 @@ export default class PaginatedViewLayout extends ViewLayout {
         height: 100%;
         overflow: hidden;
         position: relative;
+        ${!this.virtual ? 'display: flex;' : ''}
       }
 
       .virtuallist-real-content {
@@ -56,14 +57,14 @@ export default class PaginatedViewLayout extends ViewLayout {
       style: 'flex-shrink: 0;',
       'body-style': `
       column-fill: auto;
-      column-gap: ${GAP * 2}px;
+      column-gap: ${DEFAULT_GAP * 2}px;
       column-width: ${this.$el.width}px;
       width: ${this.$el.width}px;
       height: ${this.$el.height}px;
       padding-top: 20px !important;
       padding-bottom: 20px !important;
-      padding-left: ${GAP}px !important;
-      padding-right: ${GAP}px !important;
+      padding-left: ${DEFAULT_GAP}px !important;
+      padding-right: ${DEFAULT_GAP}px !important;
       box-sizing: border-box;
       margin: 0 !important;
       `,
@@ -179,7 +180,6 @@ export default class PaginatedViewLayout extends ViewLayout {
     target = findFocusElement(target);
 
     const cfi = new EpubCFI(target, `/6/${(viewIndex + 1) * 2}`);
-    console.log(cfi.toString());
 
     return cfi;
   }
@@ -196,29 +196,53 @@ export default class PaginatedViewLayout extends ViewLayout {
   display(target: EpubCFI) {
     const viewIndex = target.base!.steps[1].index;
     const view = this.viewsCache[viewIndex];
+    const el = this.getClosestElementFromCFI(view, target)!;
+
+    // 结果文本的位置是否在下一页
+    const overflow = () => {
+      const rangeOffset = target.start?.terminal?.offset || 0;
+      const { fontSize, lineHeight } = window.getComputedStyle(el);
+      const width = el.clientWidth;
+      let targetTextOffset = ((parseInt(fontSize) * rangeOffset) / width) * parseInt(lineHeight);
+      targetTextOffset = isFinite(targetTextOffset) ? targetTextOffset : 0;
+
+      let over = 0;
+      if (el.offsetTop + targetTextOffset > this.$layoutWrapper.scrollHeight) {
+        over++;
+      }
+      return over;
+    };
+
+    // 获取偏移
+    const offset = () =>
+      this.computeViewsSize(viewIndex) + (Math.floor(el.offsetLeft / this.$el.width) + overflow()) * this.$el.width;
 
     if (this.virtual) {
-      this.toPosition({
-        to: this.computeViewsSize(viewIndex),
-      });
-
-      setTimeout(() => {
-        // 当view渲染出来后，再次调整滚动高度
-        const left = this.computeViewsSize(viewIndex);
-        let offset = 0;
-        if (!isEmpty(target.path)) {
-          const el = this.getClosestElementFromCFI(view, target)!;
-          offset = Math.floor(el.offsetLeft / this.$el.width) * this.$el.width;
-        }
+      if (view.connected) {
+        this.toPosition({
+          to: offset(),
+        });
+      } else {
+        // 先移动到大概位置，等待view渲染出来后再移动到实际位置
+        view.addEventListener(
+          'connected',
+          () => {
+            macroTask(() => {
+              this.toPosition({
+                to: offset(),
+              });
+            });
+          },
+          { once: true },
+        );
 
         this.toPosition({
-          to: left + offset,
+          to: this.computeViewsSize(viewIndex),
         });
-      }, 20);
+      }
     } else {
-      const el = this.getClosestElementFromCFI(view, target);
       this.toPosition({
-        to: view.offsetLeft + (el ? el.offsetLeft : 0),
+        to: offset(),
       });
     }
   }

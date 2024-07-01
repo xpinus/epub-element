@@ -25,7 +25,7 @@ export type ViewLayoutOptions = {
 
 export default abstract class ViewLayout {
   viewsCache: EpubView[] = []; // 已经渲染的视图的缓存
-  currentViews: EpubView[] = []; // 当前渲染的视图
+  currentViewsIndex: [number, number] = [0, -1]; // 当前渲染的视图
   _instance: EpubElementInstanceType;
   $layoutWrapper: HTMLDivElement;
   virtual: boolean = true;
@@ -142,17 +142,10 @@ export default abstract class ViewLayout {
   patchRealContent() {
     const [start, end] = this.getRealContentViewsSlice();
 
-    const currentViews = Array.from(this.$rContent!.childNodes) as EpubView[];
-
     let newStart = start;
     const newEnd = end;
-    let oldStart = 0;
-    let oldEnd = -1;
-
-    if (currentViews.length) {
-      oldStart = this.viewsCache.indexOf(currentViews[0]);
-      oldEnd = this.viewsCache.indexOf(currentViews[currentViews.length - 1]);
-    }
+    let oldStart = this.currentViewsIndex[0];
+    const oldEnd = this.currentViewsIndex[1];
 
     const prependCache = [];
 
@@ -182,6 +175,8 @@ export default abstract class ViewLayout {
       this.$rContent!.append(this.viewsCache[newStart]);
       newStart++;
     }
+
+    this.currentViewsIndex = [start, end];
 
     const transformY = this.computeViewsSize(start);
     this.setRealContentTransform(transformY);

@@ -1,8 +1,9 @@
 import { PluginOption, PluginClass } from './plugin';
 import Annotate from './annotate';
+import Search from './search';
 
 class PluginsManager {
-  private static pluginsMap: Map<string, PluginClass> = new Map([[Annotate.pluginName, Annotate]]);
+  private static pluginsMap: Map<string, PluginClass> = new Map();
 
   static get(name: string) {
     return PluginsManager.pluginsMap.get(name);
@@ -26,5 +27,8 @@ class PluginsManager {
     return new PluginClass(opt);
   }
 }
+
+PluginsManager.set(Annotate.pluginName, Annotate);
+PluginsManager.set(Search.pluginName, Search);
 
 export default PluginsManager;

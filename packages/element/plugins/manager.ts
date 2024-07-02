@@ -1,6 +1,7 @@
 import { PluginOption, PluginClass } from './plugin';
 import Annotate from './annotate';
 import Search from './search';
+import Theme from './theme';
 
 class PluginsManager {
   private static pluginsMap: Map<string, PluginClass> = new Map();
@@ -30,5 +31,6 @@ class PluginsManager {
 
 PluginsManager.set(Annotate.pluginName, Annotate);
 PluginsManager.set(Search.pluginName, Search);
+PluginsManager.set(Theme.pluginName, Theme);
 
 export default PluginsManager;

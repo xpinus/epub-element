@@ -55,7 +55,25 @@ onMounted(() => {
     ins.mount(document.getElementById('epub'), {
       layout: 'scroll',
       virtual: true,
-      plugins: ['annotate', 'search'],
+      plugins: [
+        'annotate',
+        'search',
+        {
+          name: 'theme',
+          theme: 'default',
+          register: {
+            yellow: {
+              rules: {
+                body: [
+                  ['color', '#000', true],
+                  ['background', 'yellow', true],
+                ],
+              },
+              containerStyle: 'background-color: yellow;',
+            },
+          },
+        },
+      ],
     });
   });
 });
@@ -74,6 +92,10 @@ function handleNext() {
 function handlePrev() {
   epubEl?.plugins['search'].prevMatch();
 }
+
+function changeTheme(theme: string) {
+  epubEl?.plugins['theme'].active(theme);
+}
 </script>
 
 <template>
@@ -90,6 +112,12 @@ function handlePrev() {
     />
     <button @click="handlePrev">上一个</button>
     <button @click="handleNext">下一个</button>
+  </div>
+  <div class="themes-wrap">
+    <button @click="changeTheme('yellow')">默认</button>
+    <button @click="changeTheme('light')">白天</button>
+    <button @click="changeTheme('dark')">黑夜</button>
+    <button @click="changeTheme('eye')">护眼</button>
   </div>
 </template>
 

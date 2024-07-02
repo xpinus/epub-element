@@ -1,5 +1,3 @@
-import { singleton } from '../utils';
-
 type Effect = Function;
 
 export enum EventBusEventsEnum {
@@ -14,9 +12,9 @@ export enum EventBusEventsEnum {
  * @description 内部事件总线
  */
 class EventBus {
-  eventMap: Map<EventBusEventsEnum, Set<Effect>> = new Map();
+  eventMap: Map<string, Set<Effect>> = new Map();
 
-  on(type: EventBusEventsEnum, fn: Effect) {
+  on(type: string, fn: Effect) {
     if (!this.eventMap.has(type)) {
       this.eventMap.set(type, new Set([]));
     }
@@ -24,7 +22,7 @@ class EventBus {
     this.eventMap.get(type)!.add(fn);
   }
 
-  off(type: EventBusEventsEnum, fn?: Effect) {
+  off(type: string, fn?: Effect) {
     if (!this.eventMap.has(type)) {
       return;
     }
@@ -36,7 +34,7 @@ class EventBus {
     }
   }
 
-  emit(type: EventBusEventsEnum, ...args: any[]) {
+  emit(type: string, ...args: any[]) {
     if (!this.eventMap.has(type)) {
       return;
     }

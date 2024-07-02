@@ -7,3 +7,4 @@ export * from './task';
 export * from './animate';
 export * from './shadow';
 export * from './xss';
+export * from './types';

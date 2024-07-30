@@ -2,7 +2,7 @@ import CustomElement from './customEl';
 import { EventBusEventsEnum } from '../eventbus';
 import { MarkStage, Highlight, Underline } from 'mark-stage';
 import { Annotation, AnnotationType } from '../../plugins/annotate';
-import EpubElement from '../epub-element';
+import { GlobalStore } from '../store';
 import { macroTask } from '../../utils';
 
 import type { EpubElementInstanceType } from '../epub-element';
@@ -41,7 +41,7 @@ export default class EpubView extends CustomElement {
     super();
 
     const rootUUID = this.getAttribute('root')!;
-    const epubElementInstance = EpubElement.getInstance(rootUUID);
+    const epubElementInstance = GlobalStore.getInstance(rootUUID);
     if (!epubElementInstance) {
       throw new Error('no root for epub-view: ' + rootUUID);
     }

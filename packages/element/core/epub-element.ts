@@ -5,6 +5,7 @@ import Rendition from './rendition';
 import { LayoutMode } from './layouts';
 import EventBus, { EventBusEventsEnum } from './eventbus';
 import PluginsManager from '../plugins/manager';
+import { GlobalStore } from './store';
 
 import type { EpubElelementContain } from './elements';
 import type { RenditionOptions } from './rendition';
@@ -21,8 +22,6 @@ type EpubElementMountOptions = RenditionOptions & {
   plugins?: PluginUseOption;
 };
 
-const instances = new Map<string, EpubElementInstanceType>(); // 全局所有实例
-
 /**
  * @description 一切的开始 entry
  */
@@ -37,23 +36,7 @@ class EpubElement {
   public plugins: { [name: string]: Plugin } = {};
 
   constructor() {
-    EpubElement.setInstance(this.uuid, this);
-  }
-
-  static hasInstance(uuid: string) {
-    return instances.has(uuid);
-  }
-
-  static getInstance(uuid: string) {
-    return instances.get(uuid);
-  }
-
-  static setInstance(uuid: string, instance: EpubElementInstanceType) {
-    instances.set(uuid, instance);
-  }
-
-  static removeInstance(uuid: string) {
-    instances.delete(uuid);
+    GlobalStore.setInstance(this.uuid, this);
   }
 
   /**
@@ -153,7 +136,7 @@ class EpubElement {
    * 销毁实例
    */
   destroy() {
-    EpubElement.removeInstance(this.uuid);
+    GlobalStore.removeInstance(this.uuid);
   }
 }
 

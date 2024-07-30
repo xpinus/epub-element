@@ -1,11 +1,11 @@
 import path from 'path';
-
 import { rollup } from 'rollup';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import typescript from 'rollup-plugin-typescript2';
-
 import esbuild from 'rollup-plugin-esbuild';
+import strip from '@rollup/plugin-strip';
+
 import { PKG_ROOT, PKG_OUTPUT, ROOT_PATH } from '../utils';
 import pkg from '../../../../package.json';
 
@@ -16,10 +16,10 @@ const buildOutputOptionsList = [
     ext: 'mjs',
   },
   //  通用模块定义规范，同时支持 amd，cjs 和 iife
-  {
-    format: 'umd',
-    ext: 'js',
-  },
+  // {
+  //   format: 'umd',
+  //   ext: 'js',
+  // },
 ];
 
 export async function build(cb) {
@@ -34,10 +34,14 @@ export async function build(cb) {
       esbuild({
         include: /\.[jt]sx?$/,
         exclude: /node_modules/,
-        target: 'es2018',
+        target: 'es2015',
         sourceMap: true,
-        // minify: true,
+        minify: true,
       }),
+      strip({
+        include: /\.[jt]sx?$/,
+        functions: ['console.log'],
+      }), // 删除console
     ],
     external: [...Object.keys(pkg.dependencies)],
   });
@@ -53,6 +57,7 @@ export async function build(cb) {
         uuid: 'uuid',
         '@zip.js/zip.js': 'zip',
         'xml-js': 'xmlJs',
+        'mark-stage': 'markstage',
       },
     });
   }

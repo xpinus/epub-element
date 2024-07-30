@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import HelloWorld from './components/HelloWorld.vue';
-import EpubElement, { EpubView, ShadowSelection } from '@epub-element/element';
+import { EpubElement, EpubView, ShadowSelection } from '../../../dist/es';
 
 let epubEl: any = null;
-const elWidth = ref('1200px');
+const elWidth = ref('600px');
 
 onMounted(() => {
   EpubElement.openEpub('history.epub').then((ins: any) => {
@@ -17,14 +17,14 @@ onMounted(() => {
 
     // 事件监听
     ins.event.on('rendered', function () {
-      console.log('epub rendered');
+      // console.log('epub rendered');
 
       // 在view被创建后，添加对应dom的事件
       // 例如在选中后高亮内容
       var selecting = false;
       // 在使用mouseup等事件时要注意，mouse最终释放的位置，如果不是选中的view可能会导致错误
       ins.$el.shadowRoot.addEventListener('mouseup', (e: MouseEvent) => {
-        console.log(e.target);
+        // console.log(e.target);
         const view = e.target!;
 
         var selection = new ShadowSelection(view.shadowRoot);
@@ -82,8 +82,8 @@ onMounted(() => {
 
 function handleSearch() {
   epubEl?.plugins['search'].search('先生').then((res) => {
-    console.log('搜索结果:', res);
-    console.log(res.map((item) => item.annoation.cfi.toString()));
+    // console.log('搜索结果:', res);
+    // console.log(res.map((item) => item.annoation.cfi.toString()));
   });
 }
 

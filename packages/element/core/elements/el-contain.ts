@@ -1,5 +1,5 @@
 import CustomElement from './customEl';
-import EpubElement from '../epub-element';
+import { GlobalStore } from '../store';
 
 import type { EpubElementInstanceType } from '../epub-element';
 
@@ -17,10 +17,10 @@ export default class EpubElelementContain extends CustomElement {
     switch (name) {
       case 'uuid':
         this.uuid = newValue;
-        if (!EpubElement.hasInstance(this.uuid)) {
+        if (!GlobalStore.hasInstance(this.uuid)) {
           throw new Error('no epub element with uuid: ' + this.uuid);
         }
-        this._instance = EpubElement.getInstance(this.uuid)!;
+        this._instance = GlobalStore.getInstance(this.uuid)!;
         break;
     }
   }

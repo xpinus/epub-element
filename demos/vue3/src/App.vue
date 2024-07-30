@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { onMounted, ref } from 'vue';
 import HelloWorld from './components/HelloWorld.vue';
 import EpubElement, { EpubView, ShadowSelection } from '@epub-element/element';
 
-let epubEl = null;
+let epubEl: any = null;
+const elWidth = ref('1200px');
 
 onMounted(() => {
   EpubElement.openEpub('history.epub').then((ins: any) => {
@@ -53,8 +54,9 @@ onMounted(() => {
 
     // 挂载
     ins.mount(document.getElementById('epub'), {
-      layout: 'scroll',
-      virtual: true,
+      layout: 'paginated',
+      virtual: false,
+      spread: elWidth.value == '1200px' ? true : false,
       plugins: [
         'annotate',
         'search',
@@ -123,7 +125,7 @@ function changeTheme(theme: string) {
 
 <style scoped>
 .book-wrap {
-  width: 600px;
+  width: v-bind(elWidth);
   height: 800px;
   margin: 80px auto;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.6);

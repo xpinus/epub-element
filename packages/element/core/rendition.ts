@@ -101,7 +101,7 @@ class Rendition {
   /**
    * @description 根据设置，获取对应的manager
    */
-  getLayout({ epubEL, layout = LayoutMode.Scroll, virtual = true }: GetLayoutOptions): ViewLayout {
+  getLayout({ epubEL, layout = LayoutMode.Scroll, virtual = true, spread = false }: GetLayoutOptions): ViewLayout {
     let _layout: ViewLayout;
 
     switch (layout) {
@@ -115,6 +115,7 @@ class Rendition {
         _layout = new PaginatedViewLayout({
           epubEL,
           virtual,
+          spread,
         });
         break;
       default:

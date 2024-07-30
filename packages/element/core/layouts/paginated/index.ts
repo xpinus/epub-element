@@ -7,19 +7,30 @@ import type { EpubView } from '../../elements';
 import type { ViewLayoutOptions } from '../layout';
 import type { Spine } from '../../book';
 
-export type PaginatedViewLayoutOptions = ViewLayoutOptions;
+export type PaginatedViewLayoutOptions = ViewLayoutOptions & {
+  spread: boolean;
+};
 
 const DEFAULT_GAP = 16; // 间隔
 
 export default class PaginatedViewLayout extends ViewLayout {
+  spread: boolean;
+
   constructor(options: PaginatedViewLayoutOptions) {
     super(options);
+
+    // 双栏
+    this.spread = options.spread;
 
     // 样式
     this.setStyle();
 
     this.handleKeyboard = this.handleKeyboard.bind(this);
     this.bindEvents();
+  }
+
+  getWidth() {
+    return !this.spread ? this.$el.width : this.$el.width * 0.5;
   }
 
   setStyle() {
@@ -53,14 +64,17 @@ export default class PaginatedViewLayout extends ViewLayout {
   }
 
   epubViewHtmlTemplate(spine: Spine) {
+    const width = this.getWidth();
+    const height = this.$el.height;
+
     const attrs = {
       style: 'flex-shrink: 0;',
       'body-style': `
       column-fill: auto;
       column-gap: ${DEFAULT_GAP * 2}px;
-      column-width: ${this.$el.width}px;
-      width: ${this.$el.width}px;
-      height: ${this.$el.height}px;
+      column-width: ${width}px;
+      width: ${width}px;
+      height: ${height}px;
       padding-top: 20px !important;
       padding-bottom: 20px !important;
       padding-left: ${DEFAULT_GAP}px !important;
@@ -199,6 +213,7 @@ export default class PaginatedViewLayout extends ViewLayout {
     const el = this.getClosestElementFromCFI(view, target)!;
 
     // 结果文本的位置是否在下一页
+    // todo 但如果这里有一个非常长的文本段，导致目标在下下页之后呢，还是有问题
     const overflow = () => {
       const rangeOffset = target.start?.terminal?.offset || 0;
       const { fontSize, lineHeight } = window.getComputedStyle(el);
@@ -214,8 +229,30 @@ export default class PaginatedViewLayout extends ViewLayout {
     };
 
     // 获取偏移
-    const offset = () =>
-      this.computeViewsSize(viewIndex) + (Math.floor(el.offsetLeft / this.$el.width) + overflow()) * this.$el.width;
+    const offset = () => {
+      const pageWidth = this.getWidth();
+      const prePageWidthAccumulation = this.computeViewsSize(viewIndex);
+      const insetPageOffsetNum = Math.floor(el.offsetLeft / pageWidth);
+
+      if (this.spread) {
+        const prePage = Math.floor(prePageWidthAccumulation / pageWidth);
+        const targetPrePage = insetPageOffsetNum + prePage;
+        if (targetPrePage % 2 === 0) {
+          // 前面有偶数页，现在目标元素出现在第一栏
+          // todo 假设不会出现超长文本段超出第二栏的情况
+          return targetPrePage * pageWidth;
+        } else {
+          // 前面有奇数页，现在目标元素出现在第二栏
+          if (overflow()) {
+            return (targetPrePage + 1) * pageWidth;
+          } else {
+            return (targetPrePage - 1) * pageWidth;
+          }
+        }
+      } else {
+        return prePageWidthAccumulation + (insetPageOffsetNum + overflow()) * pageWidth;
+      }
+    };
 
     if (this.virtual) {
       if (view.connected) {
@@ -312,10 +349,14 @@ export default class PaginatedViewLayout extends ViewLayout {
    */
   bindEvents() {
     this._instance.event.on(EventBusEventsEnum.VIEW_CONNECTED, (view: EpubView) => {
-      const scrollWidth = view.$body.querySelector('body')?.scrollWidth || 0;
-      const width = scrollWidth > this.$el.width ? scrollWidth + 16 : this.$el.width;
-      view.css({
-        width: width + 'px',
+      macroTask(() => {
+        const pageWidth = this.getWidth();
+        const scrollWidth = view.$body.querySelector('body')?.scrollWidth || 0;
+
+        const width = scrollWidth > pageWidth ? scrollWidth + 16 : pageWidth;
+        view.css({
+          width: width + 'px',
+        });
       });
     });
 

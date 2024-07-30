@@ -203,7 +203,7 @@ export default class EpubView extends CustomElement {
       this.stage = new MarkStage(target, this.$body);
     }
 
-    if (this.stage.annotations.has(annot.hash)) return;
+    if (this.stage.marks.has(annot.hash)) return;
 
     let mark;
     switch (annot.type) {

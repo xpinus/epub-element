@@ -93,6 +93,7 @@ class EpubElement {
       epubEL: this,
       layout: options.layout || LayoutMode.Scroll,
       virtual: isBoolean(options.virtual) ? options.virtual : true,
+      spread: isBoolean(options.spread) ? options.spread : false,
       // orientation: options.orientation,
     });
 

@@ -1,5 +1,5 @@
 {
-  "name": "epub-element",
+  "name": "epub-element-workspace",
   "version": "1.0.0",
   "description": "",
   "private": true,
@@ -38,7 +38,7 @@
     }
   },
   "dependencies": {
-    "@epub-element/element": "workspace:*",
+    "epub-element": "workspace:*",
     "@zip.js/zip.js": "^2.7.44",
     "mark-stage": "^0.2.0",
     "uuid": "^9.0.1"

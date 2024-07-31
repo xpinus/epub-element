@@ -8,12 +8,12 @@ importers:
 
   .:
     dependencies:
-      '@epub-element/element':
-        specifier: workspace:*
-        version: link:packages/element
       '@zip.js/zip.js':
         specifier: ^2.7.44
         version: 2.7.45
+      epub-element:
+        specifier: workspace:*
+        version: link:packages/element
       mark-stage:
         specifier: ^0.2.0
         version: 0.2.0

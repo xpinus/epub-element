@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import HelloWorld from './components/HelloWorld.vue';
-import { EpubElement, EpubView, ShadowSelection } from '../../../dist/es';
+import { EpubElement, EpubView, ShadowSelection } from 'epub-element';
 
 let epubEl: any = null;
 const elWidth = ref('600px');

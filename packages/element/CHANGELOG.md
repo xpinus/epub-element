@@ -1,4 +1,4 @@
-# @epub-element/element
+# epub-element
 
 ## 0.1.0
 

@@ -4,5 +4,16 @@
   "type": "module",
   "description": "",
   "main": "index.ts",
-  "types": "dist/es/index.d.ts"
+  "types": "dist/es/index.d.ts",
+  "keywords": [
+    "epub",
+    "epub element",
+    "epub component"
+  ],
+  "author": "xpinus",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xpinus/epub-element.git"
+  }
 }

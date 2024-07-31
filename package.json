@@ -6,10 +6,16 @@
   "type": "module",
   "keywords": [
     "EPub",
-    "epub reader"
+    "epub reader",
+    "epub element",
+    "epub component"
   ],
-  "author": "xueyunfeng",
+  "author": "xpinus",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xpinus/epub-element.git"
+  },
   "scripts": {
     "demo:vue": "pnpm -C demos/vue3 run dev",
     "clean": "pnpm run clean:dist && pnpm run -r --parallel clean",
